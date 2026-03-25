@@ -1,17 +1,20 @@
 import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import morgan from "morgan";
 import cors from "cors";
-import { connectDB } from "./config/db.js";
+import { connectDB } from "./src/config/db.js";
 
-import authRoutes from "./routes/authRoutes.js";
-import postRoutes from "./routes/postRoutes.js";
-import { errorHandler } from "./middleware/errorMiddleware.js";
+import authRoutes from "./src/routes/authRoutes.js";
+import postRoutes from "./src/routes/postRoutes.js";
+import { errorHandler } from "./src/middleware/errorMiddleware.js";
 
 dotenv.config();
-connectDB();
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 
 app.use(express.json());
 app.use(cookieParser());
@@ -28,6 +31,15 @@ app.use("/api/posts", postRoutes);
 
 app.use(errorHandler);
 
-app.listen(process.env.PORT, () =>
-  console.log(`Server running on port ${process.env.PORT}`),
-);
+const startServer = async () => {
+  await connectDB();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer().catch((err) => {
+  console.error("Failed to start server", err);
+  process.exit(1);
+});
