@@ -42,7 +42,7 @@ export default function LoginPage() {
 
   return (
     <Box className="auth-page auth-page-login">
-      <Paper className="auth-card" elevation={0}>
+      <Paper className="auth-card" elevation={1}>
         <Stack spacing={2.5}>
           <Box>
             <Typography variant="overline" className="eyebrow">

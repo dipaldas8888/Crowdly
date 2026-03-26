@@ -43,7 +43,7 @@ export default function RegisterPage() {
 
   return (
     <Box className="auth-page auth-page-register">
-      <Paper className="auth-card" elevation={0}>
+      <Paper className="auth-card" elevation={1}>
         <Stack spacing={2.5}>
           <Box>
             <Typography variant="overline" className="eyebrow">

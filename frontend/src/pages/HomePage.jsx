@@ -1,95 +1,43 @@
-import {
-  Avatar,
-  Box,
-  Button,
-  Chip,
-  Container,
-  Paper,
-  Stack,
-  Typography,
-} from "@mui/material";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useEffect, useState } from "react";
+import { apiRequest } from "../lib/api";
+import Navbar from "../components/Navbar";
+import PostCard from "../components/PostCard";
+import CreatePost from "../components/CreatePost";
+import { Container, Typography, Stack } from "@mui/material";
 
 export default function HomePage() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const [posts, setPosts] = useState([]);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const data = await apiRequest("/posts");
+        setPosts(data);
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   return (
-    <Box className="home-page">
-      <Container maxWidth="lg" className="home-shell">
-        <Paper className="home-hero" elevation={0}>
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={3}
-            justifyContent="space-between"
-            alignItems={{ xs: "flex-start", md: "center" }}
-          >
-            <Stack spacing={2}>
-              <Chip label="Protected Route" color="secondary" />
-              <Typography variant="h3">Home page unlocked</Typography>
-              <Typography className="muted-text home-copy">
-                You are signed in and viewing a route protected by the data
-                router and auth context. This is the right place to grow your
-                feed next.
-              </Typography>
-            </Stack>
+    <div>
+      <Navbar />
 
-            <Paper className="profile-card" elevation={0}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Avatar className="profile-avatar">
-                  {user?.username?.[0]?.toUpperCase() || "U"}
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">
-                    {user?.username || "Crowdly User"}
-                  </Typography>
-                  <Typography className="muted-text">{user?.email}</Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Stack>
-        </Paper>
+      <Container maxWidth="md">
+        <CreatePost setPosts={setPosts} />
 
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={3}
-          className="home-grid"
-        >
-          <Paper className="info-card" elevation={0}>
-            <Typography variant="h5">Routing setup</Typography>
-            <Typography className="muted-text">
-              `createBrowserRouter` and `RouterProvider` are driving navigation,
-              with `/home` guarded so unauthenticated users are redirected.
-            </Typography>
-          </Paper>
+        <Typography variant="h4" sx={{ mb: 3 }}>
+          Feed
+        </Typography>
 
-          <Paper className="info-card" elevation={0}>
-            <Typography variant="h5">Auth state</Typography>
-            <Typography className="muted-text">
-              Context API stores the signed-in user and persists it in
-              `localStorage` for a smoother refresh experience.
-            </Typography>
-          </Paper>
-
-          <Paper className="info-card accent-card" elevation={0}>
-            <Typography variant="h5">Next step</Typography>
-            <Typography className="muted-text">
-              Connect this page to your posts API to create, list, like, and
-              comment from the UI.
-            </Typography>
-          </Paper>
+        <Stack spacing={3}>
+          {posts.map((post) => (
+            <PostCard key={post._id} post={post} setPosts={setPosts} />
+          ))}
         </Stack>
-
-        <Button variant="contained" size="large" onClick={handleLogout}>
-          Logout
-        </Button>
       </Container>
-    </Box>
+    </div>
   );
 }

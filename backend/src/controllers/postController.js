@@ -40,7 +40,12 @@ export const createPost = async (req, res, next) => {
       image,
     });
 
-    res.status(201).json(post);
+    const populatedPost = await Post.findById(post._id).populate(
+      "user",
+      "username",
+    );
+
+    res.status(201).json(populatedPost);
   } catch (err) {
     next(err);
   }
@@ -50,6 +55,7 @@ export const getFeed = async (req, res, next) => {
   try {
     const posts = await Post.find()
       .populate("user", "username")
+      .populate("likes", "username")
       .populate("comments.user", "username")
       .sort({ createdAt: -1 });
 
@@ -59,6 +65,8 @@ export const getFeed = async (req, res, next) => {
   }
 };
 
+import mongoose from "mongoose";
+
 export const likePost = async (req, res, next) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -67,13 +75,29 @@ export const likePost = async (req, res, next) => {
       throw new ApiError(404, "Post not found");
     }
 
-    if (!post.likes.includes(req.user)) {
-      post.likes.push(req.user);
+    const userId = new mongoose.Types.ObjectId(req.user);
+
+    const alreadyLiked = post.likes.some(
+      (id) => id.toString() === userId.toString(),
+    );
+
+    if (alreadyLiked) {
+      post.likes = post.likes.filter(
+        (id) => id.toString() !== userId.toString(),
+      );
+    } else {
+      // 🔥 LIKE
+      post.likes.push(userId);
     }
 
     await post.save();
 
-    res.json(post);
+    const updatedPost = await Post.findById(post._id)
+      .populate("user", "username")
+      .populate("likes", "username")
+      .populate("comments.user", "username");
+
+    res.json(updatedPost);
   } catch (err) {
     next(err);
   }
@@ -100,7 +124,12 @@ export const commentPost = async (req, res, next) => {
 
     await post.save();
 
-    res.json(post);
+    const updatedPost = await Post.findById(post._id)
+      .populate("user", "username")
+      .populate("likes", "username")
+      .populate("comments.user", "username");
+
+    res.json(updatedPost);
   } catch (err) {
     next(err);
   }
