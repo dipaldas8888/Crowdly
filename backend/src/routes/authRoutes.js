@@ -2,18 +2,25 @@ import express from "express";
 import {
   register,
   login,
-  getMe,
   logout,
+  getMe,
+  sendRegisterOTP,
+  verifyOTPRegister,
+  forgotPassword,
+  resetPassword,
 } from "../controllers/authController.js";
-import { validate } from "../middleware/validateMiddleware.js";
-import { loginSchema, registerSchema } from "../validators/AuthValidators.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/register", validate(registerSchema), register);
-router.post("/login", validate(loginSchema), login);
-router.get("/me", protect, getMe);
+router.post("/register", register);
+router.post("/send-otp", sendRegisterOTP);
+router.post("/verify-otp-register", verifyOTPRegister);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
+
+router.post("/login", login);
 router.post("/logout", logout);
+router.get("/me", protect, getMe);
 
 export default router;

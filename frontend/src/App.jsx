@@ -8,6 +8,10 @@ import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+import FriendsPage from "./pages/FriendsPage";
+import GroupsPage from "./pages/GroupsPage";
+import GroupDetailPage from "./pages/GroupDetailPage";
+import ProfilePage from "./pages/ProfilePage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { apiRequest } from "./lib/api";
 import "./App.css";
@@ -88,6 +92,26 @@ export const router = createBrowserRouter([
           {
             path: "home",
             element: <HomePage />,
+          },
+          {
+            path: "friends",
+            element: <FriendsPage />,
+          },
+          {
+            path: "groups",
+            element: <GroupsPage />,
+          },
+          {
+            path: "groups/:id",
+            element: <GroupDetailPage />,
+          },
+          {
+            path: "profile",
+            element: <ProfilePage />,
+          },
+          {
+            path: "profile/:id",
+            element: <ProfilePage />,
           },
         ],
       },

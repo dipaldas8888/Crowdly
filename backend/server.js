@@ -7,6 +7,9 @@ import { connectDB } from "./src/config/db.js";
 
 import authRoutes from "./src/routes/authRoutes.js";
 import postRoutes from "./src/routes/postRoutes.js";
+import friendRoutes from "./src/routes/friendRoutes.js";
+import groupRoutes from "./src/routes/groupRoutes.js";
+import userRoutes from "./src/routes/userRoutes.js";
 import { errorHandler } from "./src/middleware/errorMiddleware.js";
 
 dotenv.config();
@@ -28,6 +31,9 @@ app.use(
 
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/friends", friendRoutes);
+app.use("/api/groups", groupRoutes);
+app.use("/api/users", userRoutes);
 
 app.use(errorHandler);
 
