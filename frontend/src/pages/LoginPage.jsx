@@ -1,20 +1,17 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import RegisterOTPModal from "../components/RegisterOTPModal";
 import { apiRequest } from "../lib/api";
 import {
-  Mail,
-  Lock,
   Eye,
   EyeOff,
-  User,
   Loader2,
   Sparkles,
-  Layers,
-  Activity,
-  TrendingUp,
+  Heart,
+  Clock,
 } from "lucide-react";
 
 export default function LoginPage({ defaultAuthMode = "signin" }) {
@@ -40,9 +37,11 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
     try {
       setLoading(true);
       await login({ email, password });
+      toast.success("Welcome back to Crowdly!");
       navigate("/home");
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || "Failed to sign in");
     } finally {
       setLoading(false);
     }
@@ -55,78 +54,129 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
     try {
       setLoading(true);
       setError("");
-      // Send OTP to email first
       await apiRequest("/auth/send-otp", {
         method: "POST",
         body: { email },
       });
 
+      toast.success("Verification OTP sent to your email!");
       setShowRegisterOTPModal(true);
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 md:p-8 font-sans antialiased">
-      {/* Outer Rounded Container Matching Screenshot Layout */}
-      <div className="bg-white rounded-[32px] shadow-2xl overflow-hidden max-w-5xl w-full border border-slate-200/80 grid grid-cols-1 md:grid-cols-12 min-h-[640px]">
-        {/* Left Column: Form Section (7 Columns) */}
-        <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-between space-y-6">
-          {/* Top Brand Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-teal-700 text-white flex items-center justify-center font-bold text-sm shadow-sm">
-              <Sparkles className="w-4 h-4" />
+    <div className="min-h-screen bg-white text-slate-800 font-sans antialiased flex flex-col justify-between">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-screen">
+        {/* ── Left Side: Brand & Interactive Visual Showcase (7 cols) ── */}
+        <div className="lg:col-span-7 bg-slate-50/60 p-6 sm:p-10 lg:p-14 flex flex-col justify-between relative overflow-hidden">
+          {/* Brand Logo Header */}
+          <div className="flex items-center gap-3">
+            <div className="h-10 px-3 bg-[#0b1b2d] rounded-2xl flex items-center justify-center border border-slate-800/20 shadow-sm transition-all hover:scale-105">
+              <img
+                src="/logo.png"
+                alt="Crowdly"
+                className="h-7 w-auto object-contain"
+              />
             </div>
-            <span className="text-xl font-extrabold text-slate-900 tracking-tight">
-              Crowdly
-            </span>
           </div>
 
-          {/* Center Form Container */}
-          <div className="max-w-md w-full mx-auto space-y-5">
-            {/* Header Text */}
-            <div className="text-center space-y-1">
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
-                Welcome to Crowdly
-              </h2>
-              <p className="text-xs text-slate-400">
-                Start your experience with Crowdly by signing in or signing up.
-              </p>
+          {/* Center Graphic Showcase Collage */}
+          <div className="my-10 lg:my-auto relative w-full max-w-lg mx-auto h-[380px] sm:h-[420px] flex items-center justify-center">
+            {/* Floating Laughing Reaction Badge */}
+            <div className="absolute top-4 left-8 sm:left-14 w-12 h-12 rounded-full bg-amber-400 border-2 border-white shadow-lg flex items-center justify-center z-30 animate-bounce [animation-duration:3s]">
+              <span className="text-2xl">😄</span>
             </div>
 
-            {/* Segmented Switcher Pill Bar */}
-            <div className="bg-slate-100 p-1 rounded-2xl flex items-center border border-slate-200/70">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode("signin");
-                  setError("");
-                }}
-                className={`flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                  authMode === "signin"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthMode("signup");
-                  setError("");
-                }}
-                className={`flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                  authMode === "signup"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                Sign Up
-              </button>
+            {/* Floating Heart Reaction Badge */}
+            <div className="absolute bottom-12 right-6 sm:right-12 w-14 h-14 rounded-full bg-gradient-to-tr from-rose-500 to-pink-500 text-white shadow-xl flex items-center justify-center z-30 animate-pulse">
+              <Heart className="w-7 h-7 fill-white" />
+            </div>
+
+            {/* Back Photo Card */}
+            <div className="absolute top-8 left-12 w-52 sm:w-60 h-64 sm:h-72 rounded-3xl overflow-hidden shadow-xl border-4 border-white transform -rotate-6 transition-transform hover:rotate-0 duration-300">
+              <img
+                src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80"
+                alt="Feed photo"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-md p-1.5 rounded-xl">
+                <Sparkles className="w-4 h-4 text-blue-600" />
+              </div>
+            </div>
+
+            {/* Center Story Video Mockup Card */}
+            <div className="absolute top-0 right-10 sm:right-16 w-56 sm:w-64 h-80 sm:h-96 rounded-3xl overflow-hidden shadow-2xl border-4 border-white z-10 transform rotate-3 transition-transform hover:rotate-0 duration-300">
+              <img
+                src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80"
+                alt="Story video"
+                className="w-full h-full object-cover"
+              />
+              {/* Progress indicator */}
+              <div className="absolute top-3 inset-x-3 flex gap-1">
+                <div className="h-1 flex-1 bg-white rounded-full"></div>
+                <div className="h-1 flex-1 bg-white/40 rounded-full"></div>
+              </div>
+              {/* Time Badge */}
+              <div className="absolute top-6 right-3 bg-black/50 backdrop-blur-md text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span>16:45</span>
+              </div>
+            </div>
+
+            {/* Foreground Post Ticket Card */}
+            <div className="absolute bottom-4 left-16 sm:left-24 w-52 sm:w-60 h-52 sm:h-60 rounded-3xl bg-white p-3 shadow-2xl border border-slate-100 z-20 transform -rotate-3">
+              <div className="w-full h-36 rounded-2xl overflow-hidden mb-2">
+                <img
+                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=600&q=80"
+                  alt="Post preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-2 w-3/4 bg-slate-200 rounded-full"></div>
+                <div className="h-2 w-1/2 bg-slate-100 rounded-full"></div>
+              </div>
+            </div>
+
+            {/* Circular Overlapping Avatar Badge */}
+            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full border-4 border-blue-500 p-1 shadow-2xl z-30 bg-white">
+              <img
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80"
+                alt="User badge"
+                className="w-full h-full rounded-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Bottom Bold Headline */}
+          <div className="z-10 pt-4">
+            <h1 className="text-4xl sm:text-5xl xl:text-6xl font-black text-slate-900 leading-[1.08] tracking-tight">
+              Explore <br />
+              the <br />
+              things <br />
+              <span className="text-blue-600">you love.</span>
+            </h1>
+          </div>
+        </div>
+
+        {/* ── Right Side: Auth Form Panel (5 cols) ── */}
+        <div className="lg:col-span-5 bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-slate-200/80">
+          <div className="max-w-md w-full mx-auto space-y-6">
+            {/* Header */}
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                {authMode === "signin" ? "Log in to Crowdly" : "Create a new account"}
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                {authMode === "signin"
+                  ? "Enter your credentials to access your account"
+                  : "It's quick and easy to join the Crowdly community"}
+              </p>
             </div>
 
             {error && (
@@ -137,46 +187,33 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
 
             {/* Sign In Form */}
             {authMode === "signin" ? (
-              <form onSubmit={handleSignIn} className="space-y-4 text-xs">
+              <form onSubmit={handleSignIn} className="space-y-4">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1.5">
-                    Email Address *
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Email address or username
                   </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="Enter your email address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition-all"
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    placeholder="Email address or username"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all placeholder-slate-400"
+                  />
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="font-semibold text-slate-700">
-                      Password *
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowForgotModal(true)}
-                      className="text-[11px] font-semibold text-teal-700 hover:underline cursor-pointer"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Password
+                  </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder="Password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition-all"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all placeholder-slate-400"
                     />
                     <button
                       type="button"
@@ -192,100 +229,80 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
                   </div>
                 </div>
 
+                {/* Primary Log in Button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-teal-700 hover:bg-teal-800 active:scale-[0.99] text-white font-semibold py-3.5 rounded-xl transition-all shadow-md shadow-teal-700/20 disabled:opacity-50 flex items-center justify-center gap-2 text-xs cursor-pointer mt-2"
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-3.5 rounded-full transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2 text-sm cursor-pointer mt-2"
                 >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Sign In</span>
+                  <span>Log in</span>
                 </button>
 
-                {/* Social Login Buttons */}
-                <div className="pt-2 text-center space-y-3">
-                  <div className="relative flex py-1 items-center">
-                    <div className="flex-grow border-t border-slate-200"></div>
-                    <span className="flex-shrink mx-3 text-[11px] text-slate-400">
-                      Or continue with
-                    </span>
-                    <div className="flex-grow border-t border-slate-200"></div>
-                  </div>
+                {/* Forgotten Password Link */}
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotModal(true)}
+                    className="text-xs font-semibold text-blue-600 hover:underline cursor-pointer"
+                  >
+                    Forgotten password?
+                  </button>
+                </div>
 
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors text-slate-700 font-bold text-xs"
-                      title="Google Login"
-                    >
-                      G
-                    </button>
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors text-slate-700 font-bold text-xs"
-                      title="Apple Login"
-                    >
-                      
-                    </button>
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors text-slate-700 font-bold text-xs"
-                      title="Facebook Login"
-                    >
-                      f
-                    </button>
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-colors text-slate-700 font-bold text-xs"
-                      title="X Login"
-                    >
-                      𝕏
-                    </button>
-                  </div>
+                {/* Divider Line */}
+                <div className="my-6 border-t border-slate-200"></div>
+
+                {/* Create New Account Button */}
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode("signup");
+                      setError("");
+                    }}
+                    className="w-full sm:w-auto px-8 py-3 bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 font-bold rounded-full text-sm transition-all cursor-pointer"
+                  >
+                    Create new account
+                  </button>
                 </div>
               </form>
             ) : (
               /* Sign Up Form */
-              <form onSubmit={handleSignUpInit} className="space-y-4 text-xs">
+              <form onSubmit={handleSignUpInit} className="space-y-4">
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1.5">
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
                     Username *
                   </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Enter your username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition-all"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    placeholder="Enter your username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all placeholder-slate-400"
+                  />
                 </div>
 
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1.5">
-                    Email Address *
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Email address *
                   </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="Enter your email address"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition-all"
-                    />
-                  </div>
+                  <input
+                    type="email"
+                    placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all placeholder-slate-400"
+                  />
                 </div>
 
                 <div>
-                  <label className="font-semibold text-slate-700 block mb-1.5">
-                    Password *
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    New password *
                   </label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Create password (min 6 chars)"
@@ -293,7 +310,7 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-10 py-3 text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition-all"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all placeholder-slate-400"
                     />
                     <button
                       type="button"
@@ -309,79 +326,39 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
                   </div>
                 </div>
 
+                {/* Primary Sign Up Button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-teal-700 hover:bg-teal-800 active:scale-[0.99] text-white font-semibold py-3.5 rounded-xl transition-all shadow-md shadow-teal-700/20 disabled:opacity-50 flex items-center justify-center gap-2 text-xs cursor-pointer mt-2"
+                  className="w-full bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold py-3.5 rounded-full transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 flex items-center justify-center gap-2 text-sm cursor-pointer mt-2"
                 >
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>Continue to Verification</span>
+                  <span>Sign Up & Send OTP</span>
                 </button>
+
+                {/* Divider Line */}
+                <div className="my-6 border-t border-slate-200"></div>
+
+                {/* Back to Login Button */}
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode("signin");
+                      setError("");
+                    }}
+                    className="w-full sm:w-auto px-8 py-3 bg-white border-2 border-slate-300 text-slate-700 hover:bg-slate-50 font-bold rounded-full text-sm transition-all cursor-pointer"
+                  >
+                    Already have an account? Log in
+                  </button>
+                </div>
               </form>
             )}
-          </div>
 
-          {/* Footer Text */}
-          <div className="text-center text-[10px] text-slate-400 border-t border-slate-100 pt-4">
-            Copyright : Crowdly, All Right Reserved |{" "}
-            <a href="#" className="hover:underline text-slate-500">
-              Term & Condition
-            </a>{" "}
-            |{" "}
-            <a href="#" className="hover:underline text-slate-500">
-              Privacy & Policy
-            </a>
-          </div>
-        </div>
-
-        {/* Right Column: Hero Showcase Container (5 Columns) */}
-        <div className="md:col-span-5 bg-gradient-to-br from-teal-950 via-teal-900 to-emerald-950 p-8 text-white flex flex-col justify-between relative overflow-hidden">
-          {/* Subtle Background Tech Grid */}
-          <div className="absolute inset-0 bg-[radial-gradient(#2dd4bf_1px,transparent_1px)] [background-size:16px_16px] opacity-10"></div>
-
-          {/* Floating Glassmorphism Preview Cards */}
-          <div className="relative z-10 space-y-3 pt-4">
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 p-4 rounded-2xl shadow-xl space-y-2 max-w-xs ml-auto">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="font-semibold text-teal-200">Community Stats</span>
-                <span className="text-teal-400">Live</span>
-              </div>
-              <div className="text-lg font-bold text-white">$17,366.00</div>
-              <div className="text-[10px] text-teal-300/80">Active User Engagement +12.8%</div>
-            </div>
-
-            <div className="bg-white/10 backdrop-blur-md border border-white/15 p-4 rounded-2xl shadow-xl space-y-2 max-w-xs mr-auto">
-              <div className="flex items-center gap-2 text-xs">
-                <Activity className="w-4 h-4 text-emerald-400" />
-                <span className="font-semibold">Future Growth</span>
-              </div>
-              <div className="h-1.5 w-full bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-400 rounded-full w-[82%]"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Center Bottom Brand & Text Content */}
-          <div className="relative z-10 space-y-4 pt-6">
-            <div className="w-12 h-12 rounded-2xl bg-teal-500/20 border border-teal-400/30 backdrop-blur-md flex items-center justify-center text-teal-300 shadow-lg">
-              <Layers className="w-6 h-6" />
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-xl sm:text-2xl font-bold leading-tight">
-                A Unified Hub for Smarter Social Connections
-              </h3>
-              <p className="text-xs text-teal-100/70 leading-relaxed">
-                Crowdly empowers you with a unified social command center—delivering deep insights and a 360° view of your entire community.
-              </p>
-            </div>
-
-            {/* Carousel Pagination Dots */}
-            <div className="flex items-center gap-2 pt-2">
-              <div className="h-1.5 w-12 bg-white rounded-full"></div>
-              <div className="h-1.5 w-3 bg-white/30 rounded-full"></div>
-              <div className="h-1.5 w-3 bg-white/30 rounded-full"></div>
-              <div className="h-1.5 w-3 bg-white/30 rounded-full"></div>
+            {/* Bottom Meta Branding */}
+            <div className="pt-6 text-center text-xs font-bold text-blue-600 flex items-center justify-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-blue-600" />
+              <span>Crowdly</span>
             </div>
           </div>
         </div>

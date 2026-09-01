@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
 import Navbar from "../components/Navbar";
 import LeftSidebar from "../components/LeftSidebar";
 import { apiRequest } from "../lib/api";
@@ -18,7 +19,29 @@ import {
   Phone,
   Video as VideoIcon,
   MoreHorizontal,
+  Trash2,
+  Smile,
+  FileText,
+  Download,
+  Paperclip,
+  Pencil,
 } from "lucide-react";
+
+// Preset emoji categories for emoji picker
+const EMOJI_CATEGORIES = [
+  {
+    name: "Smileys",
+    emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "🙃", "😉", "😌", "😍", "🥰", "😘", "😗", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄", "😬", "😮", "😴", "😷", "🤒", "🤕", "🤢", "🤮", "😎", "🥳", "🤠", "🤯", "🧐", "🤓"],
+  },
+  {
+    name: "Hearts & Hands",
+    emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💖", "💗", "💓", "💞", "💕", "❣️", "💔", "❤️‍🔥", "🔥", "✨", "⭐", "🎉", "👏", "👍", "👎", "👊", "✊", "🤛", "🤜", "🙌", "👐", "🤲", "🙏", "🤝", "💪", "✌️", "🤘", "👌", "🤌", "<ctrl42>", "🖐️"],
+  },
+  {
+    name: "Objects & Fun",
+    emojis: ["🚀", "💡", "📷", "🎥", "💻", "📱", "📚", "📄", "📌", "💬", "🔔", "💯", "🎯", "🏆", "🎁", "🌈", "☀️", "🌙", "☕", "🍕", "🍔", "⚽", "🏀", "🚗", "🎧", "🎮", "🔑", "💎"],
+  },
+];
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -29,24 +52,42 @@ export default function MessagesPage() {
   const [activePartner, setActivePartner] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState("");
+
+  // Editing message states
+  const [editingMsgId, setEditingMsgId] = useState(null);
+  const [editingText, setEditingText] = useState("");
+  const [savingMsgEdit, setSavingMsgEdit] = useState(false);
+  
+  // Attachments
   const [image, setImage] = useState(null);
-  const [search, setSearch] = useState("");
+  const [imagePreview, setImagePreview] = useState(null);
+  const [docFile, setDocFile] = useState(null);
+  const [docFileName, setDocFileName] = useState("");
+
   const [loadingConv, setLoadingConv] = useState(true);
   const [loadingMsg, setLoadingMsg] = useState(false);
   const [sendingMsg, setSendingMsg] = useState(false);
+  const [search, setSearch] = useState("");
   const [partnerTyping, setPartnerTyping] = useState(false);
-  const typingTimeoutRef = useRef(null);
+  
+  // Popovers & menus
+  const [showChatMenu, setShowChatMenu] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeEmojiTab, setActiveEmojiTab] = useState(0);
 
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
-  // Check if a user is online
-  const isUserOnline = useCallback(
-    (userId) => onlineUsers.includes(userId?.toString()),
-    [onlineUsers]
-  );
+  // Check if a user is online via socket or flag
+  const isUserOnline = (userId) => {
+    if (!userId) return false;
+    return (
+      onlineUsers?.includes(userId.toString()) ||
+      onlineUsers?.includes(userId)
+    );
+  };
 
-  // Fetch all conversations (friends + people we've messaged)
+  // Fetch all conversations on mount
   const fetchConversations = useCallback(async () => {
     try {
       setLoadingConv(true);
@@ -64,14 +105,11 @@ export default function MessagesPage() {
   }, [fetchConversations]);
 
   // Handle ?user=<id> query param — auto-open chat with that user
-  // This runs independently of the conversations list so it works even when
-  // conversations is empty (first-time message to someone).
   const didLoadTargetUser = useRef(false);
   useEffect(() => {
     const targetUserId = searchParams.get("user");
     if (!targetUserId || didLoadTargetUser.current) return;
 
-    // Check if already in loaded conversations
     const existing = conversations.find((c) => c.user?._id === targetUserId);
     if (existing) {
       didLoadTargetUser.current = true;
@@ -79,14 +117,11 @@ export default function MessagesPage() {
       return;
     }
 
-    // Either conversations haven't loaded yet OR this user isn't in the list.
-    // Fetch their profile directly so we can open the chat right away.
     apiRequest(`/users/profile/${targetUserId}`)
       .then((res) => {
         if (res.user) {
           didLoadTargetUser.current = true;
           setActivePartner(res.user);
-          // Insert a placeholder conversation entry in the sidebar
           setConversations((prev) => {
             const already = prev.some((c) => c.user?._id === res.user._id);
             if (already) return prev;
@@ -95,9 +130,7 @@ export default function MessagesPage() {
         }
       })
       .catch(console.error);
-  // Run when conversations finish loading OR the search param changes
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, loadingConv]);
+  }, [searchParams, loadingConv, conversations]);
 
   // Fetch messages for active partner
   useEffect(() => {
@@ -108,7 +141,6 @@ export default function MessagesPage() {
         setLoadingMsg(true);
         const data = await apiRequest(`/messages/${activePartner._id}`);
         setMessages(Array.isArray(data) ? data : []);
-        // Clear unread badge
         setConversations((prev) =>
           prev.map((c) =>
             c.user?._id === activePartner._id ? { ...c, unreadCount: 0 } : c
@@ -124,22 +156,25 @@ export default function MessagesPage() {
     fetchMessages();
   }, [activePartner?._id]);
 
-  // Listen for real-time incoming messages via Socket.io
+  // Socket event listeners for real-time messages & typing
   useEffect(() => {
-    const sock = socket.current;
+    const sock = socket?.current;
     if (!sock) return;
 
     const handleNewMessage = (msg) => {
       const senderId =
         typeof msg.sender === "object" ? msg.sender._id : msg.sender;
 
-      // If this message is from the currently active chat, append it
-      if (senderId === activePartner?._id) {
+      if (activePartner && senderId === activePartner._id) {
         setMessages((prev) => [...prev, msg]);
-        // Also mark as read immediately
-        apiRequest(`/messages/${senderId}`).catch(() => {});
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.user?._id === activePartner._id
+              ? { ...c, lastMessage: msg, unreadCount: 0 }
+              : c
+          )
+        );
       } else {
-        // Otherwise, increment unread count in conversation list
         setConversations((prev) => {
           const exists = prev.some((c) => c.user?._id === senderId);
           if (exists) {
@@ -153,7 +188,6 @@ export default function MessagesPage() {
                 : c
             );
           }
-          // New conversation not yet in list — add it
           const senderUser =
             typeof msg.sender === "object"
               ? msg.sender
@@ -192,7 +226,7 @@ export default function MessagesPage() {
       sock.off("typing", handleTyping);
       sock.off("stopTyping", handleStopTyping);
     };
-  }, [socket, activePartner?._id]);
+  }, [socket, activePartner]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -214,85 +248,189 @@ export default function MessagesPage() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if ((!text.trim() && !image) || !activePartner || sendingMsg) return;
+    if ((!text.trim() && !image && !docFile) || !activePartner || sendingMsg) return;
 
     const formData = new FormData();
     if (text.trim()) formData.append("text", text);
     if (image) formData.append("image", image);
+    if (docFile) formData.append("image", docFile);
+
+    const optimisticMsg = {
+      _id: `temp-${Date.now()}`,
+      sender: user,
+      recipient: activePartner,
+      text: text.trim(),
+      image: imagePreview,
+      fileUrl: docFile ? URL.createObjectURL(docFile) : "",
+      fileName: docFileName,
+      read: false,
+      createdAt: new Date(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setText("");
+    setImage(null);
+    setImagePreview(null);
+    setDocFile(null);
+    setDocFileName("");
+    setShowEmojiPicker(false);
+    socket.current?.emit("stopTyping", { to: activePartner._id });
 
     try {
       setSendingMsg(true);
-      socket.current?.emit("stopTyping", { to: activePartner._id });
-
-      const newMsg = await apiRequest(`/messages/${activePartner._id}`, {
+      const savedMsg = await apiRequest(`/messages/${activePartner._id}`, {
         method: "POST",
         body: formData,
       });
 
-      // Add to local messages immediately (optimistic)
-      setMessages((prev) => [...prev, newMsg]);
+      setMessages((prev) =>
+        prev.map((m) => (m._id === optimisticMsg._id ? savedMsg : m))
+      );
 
-      // Emit to partner via socket for real-time delivery
-      socket.current?.emit("sendMessage", newMsg);
-
-      // Update conversation list last message
       setConversations((prev) => {
         const exists = prev.some((c) => c.user?._id === activePartner._id);
         if (exists) {
           return prev.map((c) =>
             c.user?._id === activePartner._id
-              ? { ...c, lastMessage: newMsg }
+              ? { ...c, lastMessage: savedMsg }
               : c
           );
         }
         return [
-          { user: activePartner, lastMessage: newMsg, unreadCount: 0 },
+          { user: activePartner, lastMessage: savedMsg, unreadCount: 0 },
           ...prev,
         ];
       });
 
-      setText("");
-      setImage(null);
+      socket.current?.emit("sendMessage", savedMsg);
     } catch (err) {
-      console.error("sendMessage error:", err);
+      console.error("handleSendMessage error:", err);
+      toast.error(err.message || "Failed to send message");
+      setMessages((prev) => prev.filter((m) => m._id !== optimisticMsg._id));
     } finally {
       setSendingMsg(false);
     }
+  };
+
+  const handleImagePick = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImage(file);
+    setDocFile(null);
+    setDocFileName("");
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handlePdfPick = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setDocFile(file);
+    setDocFileName(file.name);
+    setImage(null);
+    setImagePreview(null);
+  };
+
+  const handleAddEmoji = (emojiStr) => {
+    setText((prev) => prev + emojiStr);
+  };
+
+  // Edit single message
+  const handleSaveMessageEdit = async (messageId) => {
+    if (!editingText.trim() || savingMsgEdit) return;
+    try {
+      setSavingMsgEdit(true);
+      const updatedMsg = await apiRequest(`/messages/message/${messageId}`, {
+        method: "PUT",
+        body: { text: editingText.trim() },
+      });
+      setMessages((prev) =>
+        prev.map((m) => (m._id === messageId ? updatedMsg : m))
+      );
+      setEditingMsgId(null);
+      setEditingText("");
+      toast.success("Message edited.");
+    } catch (err) {
+      console.error("Edit message error:", err);
+      toast.error(err.message || "Failed to edit message");
+    } finally {
+      setSavingMsgEdit(false);
+    }
+  };
+
+  // Delete single message
+  const handleDeleteMessage = async (messageId) => {
+    setMessages((prev) => prev.filter((m) => m._id !== messageId));
+    try {
+      await apiRequest(`/messages/message/${messageId}`, { method: "DELETE" });
+      toast.info("Message deleted.");
+    } catch (err) {
+      console.error("Delete message error:", err);
+      toast.error(err.message || "Failed to delete message");
+    }
+  };
+
+  // Delete entire conversation
+  const handleDeleteConversation = async () => {
+    if (!activePartner?._id) return;
+    if (
+      !window.confirm(
+        `Are you sure you want to delete the entire chat with ${activePartner.username}?`
+      )
+    )
+      return;
+
+    try {
+      await apiRequest(`/messages/conversation/${activePartner._id}`, {
+        method: "DELETE",
+      });
+      setMessages([]);
+      setConversations((prev) =>
+        prev.filter((c) => c.user?._id !== activePartner._id)
+      );
+      setShowChatMenu(false);
+      toast.info(`Conversation with ${activePartner.username} deleted.`);
+    } catch (err) {
+      console.error("Delete conversation error:", err);
+      toast.error(err.message || "Failed to delete conversation");
+    }
+  };
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const now = new Date();
+    const isToday = date.toDateString() === now.toDateString();
+    if (isToday) {
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+    return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
 
   const filteredConversations = conversations.filter((c) =>
     c.user?.username?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatTime = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    if (isToday) {
-      return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-    }
-    return date.toLocaleDateString([], { month: "short", day: "numeric" });
-  };
-
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
       <Navbar />
 
       <div className="max-w-[1600px] w-full mx-auto flex flex-1 h-[calc(100vh-3.5rem)] overflow-hidden">
-        {/* Left Nav Sidebar */}
         <LeftSidebar />
 
-        {/* 2-column messaging layout */}
         <main className="flex-1 flex overflow-hidden bg-white border-x border-slate-200/80">
-          {/* ── Conversations sidebar ── */}
-          <div className="w-72 xl:w-80 shrink-0 border-r border-slate-200/80 flex flex-col h-full bg-white">
-            {/* Header */}
-            <div className="p-4 pb-3 border-b border-slate-100 space-y-3 bg-white shrink-0">
+          {/* ── Left list panel: Conversations ── */}
+          <div className="w-80 md:w-96 border-r border-slate-200/80 flex flex-col shrink-0 bg-white">
+            {/* Header & Search */}
+            <div className="p-4 border-b border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900">Messages</h2>
-                <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
-                  {conversations.length}
+                <h2 className="text-xl font-extrabold text-slate-900">Messages</h2>
+                <span className="bg-blue-50 text-blue-600 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                  {conversations.reduce((acc, c) => acc + (c.unreadCount || 0), 0)}
                 </span>
               </div>
               <div className="relative">
@@ -362,7 +500,9 @@ export default function MessagesPage() {
                         <div className="flex items-center justify-between mt-0.5">
                           <p className={`text-[11px] truncate ${item.unreadCount > 0 ? "font-semibold text-slate-700" : "text-slate-400"}`}>
                             {item.lastMessage
-                              ? item.lastMessage.text || "📷 Image"
+                              ? item.lastMessage.fileUrl
+                                ? "📄 PDF Document"
+                                : item.lastMessage.text || "📷 Image"
                               : "Start a conversation..."}
                           </p>
                           {item.unreadCount > 0 && (
@@ -380,11 +520,11 @@ export default function MessagesPage() {
           </div>
 
           {/* ── Chat area ── */}
-          <div className="flex-1 flex flex-col h-full bg-slate-50/40">
+          <div className="flex-1 flex flex-col h-full bg-slate-50/40 relative">
             {activePartner ? (
               <>
                 {/* Chat header */}
-                <div className="px-5 py-3 border-b border-slate-200/80 bg-white flex items-center justify-between shrink-0 shadow-xs">
+                <div className="px-5 py-3 border-b border-slate-200/80 bg-white flex items-center justify-between shrink-0 shadow-xs relative">
                   <div className="flex items-center gap-3">
                     <div className="relative">
                       <img
@@ -416,21 +556,44 @@ export default function MessagesPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1">
+
+                  {/* Header Actions & Dropdown */}
+                  <div className="flex items-center gap-1 relative">
                     <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
                       <Phone className="w-4 h-4" />
                     </button>
                     <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
                       <VideoIcon className="w-4 h-4" />
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer">
+                    <button
+                      onClick={() => setShowChatMenu((prev) => !prev)}
+                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    >
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
+
+                    {showChatMenu && (
+                      <div className="absolute right-0 top-10 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1.5 w-44 text-xs font-medium">
+                        <button
+                          onClick={handleDeleteConversation}
+                          className="w-full text-left px-3.5 py-2 hover:bg-rose-50 flex items-center gap-2 text-rose-600 cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4 text-rose-500" />
+                          <span>Delete Entire Chat</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Messages stream */}
-                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+                <div
+                  className="flex-1 overflow-y-auto px-5 py-4 space-y-3"
+                  onClick={() => {
+                    if (showChatMenu) setShowChatMenu(false);
+                    if (showEmojiPicker) setShowEmojiPicker(false);
+                  }}
+                >
                   {loadingMsg ? (
                     <div className="flex justify-center p-10">
                       <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
@@ -465,10 +628,12 @@ export default function MessagesPage() {
                           : null;
                         const showAvatar = !isMe && senderId !== prevSenderId;
 
+                        const isEditingThis = editingMsgId === msg._id;
+
                         return (
                           <div
                             key={msg._id}
-                            className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}
+                            className={`flex items-end gap-2 group ${isMe ? "flex-row-reverse" : "flex-row"}`}
                           >
                             {/* Partner avatar (only first in group) */}
                             {!isMe && (
@@ -487,31 +652,126 @@ export default function MessagesPage() {
                             )}
 
                             <div className={`flex flex-col gap-0.5 max-w-xs md:max-w-md ${isMe ? "items-end" : "items-start"}`}>
-                              <div
-                                className={`px-4 py-2.5 rounded-2xl shadow-xs space-y-2 ${
-                                  isMe
-                                    ? "bg-blue-600 text-white rounded-br-sm"
-                                    : "bg-white text-slate-800 border border-slate-200/80 rounded-bl-sm"
-                                }`}
-                              >
-                                {msg.image && (
-                                  <div className="rounded-xl overflow-hidden max-h-52">
-                                    <img
-                                      src={msg.image}
-                                      alt="attachment"
-                                      className="w-full h-full object-cover"
+                              <div className="flex items-center gap-1.5 group/bubble relative">
+                                {isEditingThis ? (
+                                  /* Inline message edit box */
+                                  <div className="flex items-center gap-1.5 bg-white border border-blue-500 rounded-2xl px-3 py-1.5 shadow-md">
+                                    <input
+                                      type="text"
+                                      value={editingText}
+                                      onChange={(e) => setEditingText(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          handleSaveMessageEdit(msg._id);
+                                        }
+                                      }}
+                                      className="text-xs text-slate-800 outline-none bg-transparent"
+                                      autoFocus
                                     />
+                                    <button
+                                      onClick={() => handleSaveMessageEdit(msg._id)}
+                                      disabled={savingMsgEdit}
+                                      className="text-emerald-600 hover:text-emerald-700 cursor-pointer p-1"
+                                      title="Save"
+                                    >
+                                      <Check className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setEditingMsgId(null);
+                                        setEditingText("");
+                                      }}
+                                      className="text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                                      title="Cancel"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div
+                                    className={`px-4 py-2.5 rounded-2xl shadow-xs space-y-2 ${
+                                      isMe
+                                        ? "bg-blue-600 text-white rounded-br-sm"
+                                        : "bg-white text-slate-800 border border-slate-200/80 rounded-bl-sm"
+                                    }`}
+                                  >
+                                    {/* Attached Image */}
+                                    {msg.image && (
+                                      <div className="rounded-xl overflow-hidden max-h-52">
+                                        <img
+                                          src={msg.image}
+                                          alt="attachment"
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* Attached PDF / File */}
+                                    {msg.fileUrl && (
+                                      <div className="flex items-center gap-3 p-2.5 bg-slate-900/10 dark:bg-white/10 rounded-xl border border-white/20">
+                                        <div className="w-9 h-9 rounded-lg bg-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
+                                          <FileText className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-xs font-bold truncate">
+                                            {msg.fileName || "Document.pdf"}
+                                          </p>
+                                          <span className="text-[10px] opacity-75">PDF Document</span>
+                                        </div>
+                                        <a
+                                          href={msg.fileUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          download
+                                          className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors cursor-pointer shrink-0"
+                                          title="Download / View PDF"
+                                        >
+                                          <Download className="w-4 h-4" />
+                                        </a>
+                                      </div>
+                                    )}
+
+                                    {/* Message Text */}
+                                    {msg.text && (
+                                      <p className="text-xs sm:text-sm leading-relaxed">
+                                        {msg.text}
+                                      </p>
+                                    )}
                                   </div>
                                 )}
-                                {msg.text && (
-                                  <p className="text-xs sm:text-sm leading-relaxed">
-                                    {msg.text}
-                                  </p>
+
+                                {/* Hover action buttons for user's own sent messages */}
+                                {isMe && !isEditingThis && (
+                                  <div className="opacity-0 group-hover/bubble:opacity-100 flex items-center gap-0.5 transition-all">
+                                    {msg.text && (
+                                      <button
+                                        onClick={() => {
+                                          setEditingMsgId(msg._id);
+                                          setEditingText(msg.text);
+                                        }}
+                                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer shrink-0"
+                                        title="Edit Message"
+                                      >
+                                        <Pencil className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => handleDeleteMessage(msg._id)}
+                                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all cursor-pointer shrink-0"
+                                      title="Delete Message"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
                                 )}
                               </div>
 
                               <div className={`flex items-center gap-1 text-[10px] text-slate-400 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                                 <span>{formatTime(msg.createdAt)}</span>
+                                {msg.isEdited && (
+                                  <span className="italic text-[9px] text-slate-400">(edited)</span>
+                                )}
                                 {isMe &&
                                   (msg.read ? (
                                     <CheckCheck className="w-3 h-3 text-blue-500" />
@@ -523,109 +783,181 @@ export default function MessagesPage() {
                           </div>
                         );
                       })}
-
-                      {/* Typing bubble */}
-                      {partnerTyping && (
-                        <div className="flex items-end gap-2">
-                          <img
-                            src={
-                              activePartner.avatar ||
-                              "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-                            }
-                            alt={activePartner.username}
-                            className="w-7 h-7 rounded-full object-cover border border-slate-200"
-                          />
-                          <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-xs flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:300ms]" />
-                          </div>
-                        </div>
-                      )}
+                      <div ref={messagesEndRef} />
                     </>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
 
-                {/* Image attachment preview */}
-                {image && (
-                  <div className="px-5 py-2 bg-white border-t border-slate-100 flex items-center gap-3 shrink-0">
-                    <div className="relative w-14 h-14 rounded-xl overflow-hidden border border-slate-200">
+                {/* Attachment previews (Image or Document) */}
+                {imagePreview && (
+                  <div className="px-5 py-2 bg-white border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                       <img
-                        src={URL.createObjectURL(image)}
-                        alt="attachment preview"
-                        className="w-full h-full object-cover"
+                        src={imagePreview}
+                        alt="preview"
+                        className="w-10 h-10 rounded-lg object-cover border border-slate-200"
                       />
-                      <button
-                        onClick={() => setImage(null)}
-                        className="absolute top-0.5 right-0.5 bg-black/60 text-white p-0.5 rounded-full"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                      <span className="text-xs text-slate-500 font-medium">Image attached</span>
                     </div>
-                    <span className="text-xs text-slate-500">Image attached</span>
+                    <button
+                      onClick={() => {
+                        setImage(null);
+                        setImagePreview(null);
+                      }}
+                      className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
 
-                {/* Message input bar */}
+                {docFile && (
+                  <div className="px-5 py-2.5 bg-rose-50/60 border-t border-rose-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-rose-500 text-white flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {docFileName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">PDF Attachment ready</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setDocFile(null);
+                        setDocFileName("");
+                      }}
+                      className="p-1 text-slate-400 hover:text-rose-600 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
+                {/* ── Emoji Picker Popover Modal ── */}
+                {showEmojiPicker && (
+                  <div className="absolute bottom-16 left-5 z-30 bg-white border border-slate-200 rounded-2xl shadow-2xl p-3 w-72 sm:w-80">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        {EMOJI_CATEGORIES.map((cat, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setActiveEmojiTab(idx)}
+                            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                              activeEmojiTab === idx
+                                ? "bg-blue-50 text-blue-600"
+                                : "text-slate-500 hover:bg-slate-50"
+                            }`}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setShowEmojiPicker(false)}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1.5 max-h-48 overflow-y-auto p-1 scrollbar-thin">
+                      {EMOJI_CATEGORIES[activeEmojiTab].emojis.map((em, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleAddEmoji(em)}
+                          className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-lg transition-transform active:scale-125 cursor-pointer"
+                        >
+                          {em}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Chat input form */}
                 <form
                   onSubmit={handleSendMessage}
-                  className="p-4 bg-white border-t border-slate-100 flex items-center gap-2 shrink-0"
+                  className="px-5 py-3 border-t border-slate-200/80 bg-white flex items-center gap-2 shrink-0 relative"
                 >
-                  <input
-                    type="file"
-                    accept="image/*"
-                    ref={fileInputRef}
-                    onChange={(e) => setImage(e.target.files[0])}
-                    className="hidden"
-                  />
-
+                  {/* Emoji Button */}
                   <button
                     type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer shrink-0"
+                    onClick={() => setShowEmojiPicker((prev) => !prev)}
+                    className={`p-2.5 rounded-xl transition-colors cursor-pointer ${
+                      showEmojiPicker
+                        ? "bg-amber-50 text-amber-500"
+                        : "text-slate-400 hover:text-amber-500 hover:bg-slate-100"
+                    }`}
+                    title="Insert Emoji"
+                  >
+                    <Smile className="w-5 h-5" />
+                  </button>
+
+                  {/* Image Attachment Button */}
+                  <label
+                    className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
                     title="Attach Image"
                   >
                     <Image className="w-5 h-5" />
-                  </button>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImagePick}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* PDF / Document Attachment Button */}
+                  <label
+                    className="p-2.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    title="Attach PDF Document"
+                  >
+                    <Paperclip className="w-5 h-5" />
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf,.doc,.docx"
+                      onChange={handlePdfPick}
+                      className="hidden"
+                    />
+                  </label>
 
                   <input
                     type="text"
                     placeholder={`Message ${activePartner.username}...`}
                     value={text}
                     onChange={handleTextChange}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        handleSendMessage(e);
-                      }
-                    }}
-                    className="flex-1 bg-slate-100 border border-transparent rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-blue-500 outline-none transition-all"
+                    className="flex-1 bg-slate-100 border border-transparent rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-slate-800 focus:bg-white focus:border-blue-500 outline-none transition-all placeholder-slate-400"
                   />
 
                   <button
                     type="submit"
-                    disabled={sendingMsg || (!text.trim() && !image)}
-                    className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-xl transition-colors cursor-pointer flex items-center justify-center shrink-0"
+                    disabled={(!text.trim() && !image && !docFile) || sendingMsg}
+                    className="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl disabled:opacity-40 transition-all cursor-pointer shadow-xs"
                   >
                     {sendingMsg ? (
-                      <Loader2 className="w-4.5 h-4.5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      <Send className="w-4.5 h-4.5" />
+                      <Send className="w-4 h-4" />
                     )}
                   </button>
                 </form>
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-400 space-y-4">
-                <div className="w-20 h-20 rounded-3xl bg-blue-50 text-blue-500 flex items-center justify-center">
-                  <MessageSquareDot className="w-10 h-10" />
+              /* No partner selected placeholder */
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-4 p-8">
+                <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-xs">
+                  <MessageSquareDot className="w-8 h-8" />
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-slate-600">
+                <div className="text-center space-y-1">
+                  <h3 className="text-base font-bold text-slate-800">
                     Your Messages
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Select a conversation or start a new one.
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Select a conversation from the sidebar or start a new chat with a friend.
                   </p>
                 </div>
               </div>

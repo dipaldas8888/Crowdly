@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
@@ -90,6 +91,7 @@ export default function GroupsPage() {
       setGroups((prev) => [newGroup, ...prev]);
       setMyGroups((prev) => [newGroup, ...prev]);
 
+      toast.success("Group created successfully!");
       setShowCreateModal(false);
       setName("");
       setDescription("");
@@ -97,6 +99,7 @@ export default function GroupsPage() {
       setCoverImage(null);
     } catch (err) {
       console.log(err);
+      toast.error(err.message || "Failed to create group");
     } finally {
       setCreateLoading(false);
     }
@@ -114,11 +117,14 @@ export default function GroupsPage() {
       );
       if (isMember) {
         setMyGroups((prev) => prev.filter((g) => g._id !== groupId));
+        toast.info("Left group.");
       } else {
         setMyGroups((prev) => [...prev, updated]);
+        toast.success("Joined group successfully!");
       }
     } catch (err) {
       console.log(err);
+      toast.error(err.message || "Action failed");
     }
   };
 

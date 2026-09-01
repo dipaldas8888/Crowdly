@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
 import { Image, MapPin, Tag, X, Check } from "lucide-react";
@@ -61,6 +62,7 @@ export default function CreatePost({ setPosts, groupId }) {
       });
 
       setPosts((prev) => [newPost, ...prev]);
+      toast.success("Post published successfully!");
 
       setText("");
       setImage(null);
@@ -70,6 +72,7 @@ export default function CreatePost({ setPosts, groupId }) {
       setShowFriendsPicker(false);
     } catch (err) {
       console.log(err);
+      toast.error(err.message || "Failed to publish post");
     } finally {
       setLoading(false);
     }

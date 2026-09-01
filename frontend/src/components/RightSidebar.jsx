@@ -1,197 +1,273 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { apiRequest } from "../lib/api";
+import { useSocket } from "../context/SocketContext";
+import { Check, X, MessageSquare, Loader2 } from "lucide-react";
 
 export default function RightSidebar() {
-  const [suggestions, setSuggestions] = useState([
-    {
-      id: 1,
-      name: "Emery Farley",
-      avatar:
-        "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 2,
-      name: "Alice Wells",
-      avatar:
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80",
-    },
-  ]);
+  const navigate = useNavigate();
+  const socketContext = useSocket();
+  const onlineUsers = socketContext?.onlineUsers || [];
+  const [suggestions, setSuggestions] = useState([]);
+  const [activities, setActivities] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sentRequests, setSentRequests] = useState([]);
 
-  const activities = [
-    {
-      id: 1,
-      name: "Andrea",
-      action: "changed their cover picture.",
-      time: "1 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 2,
-      name: "Leland Walker",
-      action: "liked a post.",
-      time: "1 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 3,
-      name: "Drew Williamson",
-      action: "liked a comment.",
-      time: "1 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 4,
-      name: "Ivory Landry",
-      action: "posted a new photo.",
-      time: "1 min ago",
-      avatar:
-        "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=120&q=80",
-    },
-  ];
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSidebarData = async () => {
+      try {
+        setLoading(true);
+        const [suggestedRes, postsRes, friendsRes] = await Promise.allSettled([
+          apiRequest("/friends/suggested"),
+          apiRequest("/posts?limit=6"),
+          apiRequest("/friends"),
+        ]);
 
-  const onlineFriends = [
-    {
-      id: 1,
-      name: "Collins Fischer",
-      avatar:
-        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 2,
-      name: "Christena Mills",
-      avatar:
-        "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 3,
-      name: "Lindsey Davidson",
-      avatar:
-        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 4,
-      name: "Leana Frazier",
-      avatar:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80",
-    },
-    {
-      id: 5,
-      name: "Walker Curry",
-      avatar:
-        "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=80",
-    },
-  ];
+        if (!isMounted) return;
 
-  const handleDismiss = (id) => {
-    setSuggestions((prev) => prev.filter((s) => s.id !== id));
+        if (suggestedRes.status === "fulfilled" && Array.isArray(suggestedRes.value)) {
+          setSuggestions(suggestedRes.value);
+        }
+
+        if (postsRes.status === "fulfilled") {
+          const rawPosts = postsRes.value?.posts || (Array.isArray(postsRes.value) ? postsRes.value : []);
+          setActivities(rawPosts);
+        }
+
+        if (friendsRes.status === "fulfilled" && Array.isArray(friendsRes.value)) {
+          setFriends(friendsRes.value);
+        }
+      } catch (err) {
+        console.error("Error fetching RightSidebar data:", err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchSidebarData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleFollow = async (userId) => {
+    try {
+      setSentRequests((prev) => [...prev, userId]);
+      await apiRequest(`/friends/request/${userId}`, { method: "POST" });
+      toast.success("Friend request sent!");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to send request");
+      setSentRequests((prev) => prev.filter((id) => id !== userId));
+    }
   };
 
-  const handleFollow = (id) => {
-    setSuggestions((prev) => prev.filter((s) => s.id !== id));
+  const handleDismiss = (userId) => {
+    setSuggestions((prev) => prev.filter((s) => (s._id || s.id) !== userId));
   };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return "Recently";
+    const date = new Date(dateString);
+    const diffSec = Math.floor((new Date() - date) / 1000);
+    if (diffSec < 60) return "Just now";
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    return `${Math.floor(diffSec / 86400)}d ago`;
+  };
+
+  // Check if a user is online via Socket or DB flag
+  const isOnline = (userObj) => {
+    if (!userObj) return false;
+    const uid = userObj._id || userObj.id;
+    return onlineUsers.includes(uid?.toString()) || Boolean(userObj.isOnline);
+  };
+
+  // Sort friends: online first
+  const sortedFriends = [...friends].sort((a, b) => {
+    const aOn = isOnline(a);
+    const bOn = isOnline(b);
+    if (aOn && !bOn) return -1;
+    if (!aOn && bOn) return 1;
+    return 0;
+  });
 
   return (
     <aside className="w-72 xl:w-80 shrink-0 hidden lg:block sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-3.5 space-y-4 scrollbar-thin">
-      {/* Suggestions For You */}
+      {/* ── Suggestions For You ── */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
         <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
           Suggestions For You
         </h3>
-        <div className="space-y-2.5">
-          {suggestions.length === 0 ? (
-            <p className="text-xs text-slate-400 italic">No new suggestions</p>
-          ) : (
-            suggestions.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between gap-2"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-100"
-                  />
-                  <span className="text-xs font-semibold text-slate-800 truncate">
-                    {user.name}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handleFollow(user.id)}
-                    className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all shadow-xs cursor-pointer"
+        {loading ? (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+          </div>
+        ) : suggestions.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">No new suggestions</p>
+        ) : (
+          <div className="space-y-2.5">
+            {suggestions.slice(0, 5).map((user) => {
+              const uId = user._id || user.id;
+              const isSent = sentRequests.includes(uId);
+              return (
+                <div
+                  key={uId}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <Link
+                    to={`/profile/${uId}`}
+                    className="flex items-center gap-2 min-w-0 group"
                   >
-                    follow
-                  </button>
-                  <button
-                    onClick={() => handleDismiss(user.id)}
-                    className="bg-rose-500 hover:bg-rose-600 active:scale-95 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all shadow-xs cursor-pointer"
-                  >
-                    dismiss
-                  </button>
+                    <img
+                      src={
+                        user.avatar ||
+                        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
+                      }
+                      alt={user.username}
+                      className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-100"
+                    />
+                    <span className="text-xs font-semibold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
+                      {user.username}
+                    </span>
+                  </Link>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {isSent ? (
+                      <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Sent
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => handleFollow(uId)}
+                          className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-all shadow-xs cursor-pointer"
+                        >
+                          Follow
+                        </button>
+                        <button
+                          onClick={() => handleDismiss(uId)}
+                          className="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 text-[11px] font-semibold px-2 py-1 rounded-lg transition-all cursor-pointer"
+                          title="Dismiss"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Latest Activities */}
+      {/* ── Latest Activities ── */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
         <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
           Latest Activities
         </h3>
-        <div className="space-y-3">
-          {activities.map((act) => (
-            <div key={act.id} className="flex items-start gap-2.5 text-xs">
-              <img
-                src={act.avatar}
-                alt={act.name}
-                className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-100 mt-0.5"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-700 leading-snug">
-                  <span className="font-semibold text-slate-900">
-                    {act.name}
-                  </span>{" "}
-                  {act.action}
-                </p>
-              </div>
-              <span className="text-[10px] text-slate-400 shrink-0 whitespace-nowrap pt-0.5">
-                {act.time}
-              </span>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+          </div>
+        ) : activities.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">No recent activity</p>
+        ) : (
+          <div className="space-y-3">
+            {activities.map((post) => {
+              const author = post.user || {};
+              const authorName = author.username || "Someone";
+              const authorAvatar =
+                author.avatar ||
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80";
+
+              let actionText = "posted an update.";
+              if (post.image) actionText = "shared a new photo.";
+              else if (post.video) actionText = "shared a video.";
+              else if (post.text) {
+                actionText = `posted: "${post.text.length > 25 ? post.text.slice(0, 25) + "..." : post.text}"`;
+              }
+
+              return (
+                <div key={post._id} className="flex items-start gap-2.5 text-xs">
+                  <Link to={`/profile/${author._id || ""}`} className="shrink-0">
+                    <img
+                      src={authorAvatar}
+                      alt={authorName}
+                      className="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-100 mt-0.5"
+                    />
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700 leading-snug">
+                      <Link
+                        to={`/profile/${author._id || ""}`}
+                        className="font-semibold text-slate-900 hover:text-blue-600 transition-colors"
+                      >
+                        {authorName}
+                      </Link>{" "}
+                      <span className="text-slate-600">{actionText}</span>
+                    </p>
+                  </div>
+                  <span className="text-[10px] text-slate-400 shrink-0 whitespace-nowrap pt-0.5">
+                    {formatTime(post.createdAt)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Online Friends */}
+      {/* ── Online Friends ── */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs">
         <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
-          Online Friends
+          Online Friends ({sortedFriends.filter(isOnline).length})
         </h3>
-        <div className="space-y-2">
-          {onlineFriends.map((friend) => (
-            <div
-              key={friend.id}
-              className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
-            >
-              <div className="relative shrink-0">
-                <img
-                  src={friend.avatar}
-                  alt={friend.name}
-                  className="w-8 h-8 rounded-full object-cover border border-slate-100"
-                />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-              </div>
-              <span className="text-xs font-semibold text-slate-800 truncate">
-                {friend.name}
-              </span>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center p-4">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+          </div>
+        ) : sortedFriends.length === 0 ? (
+          <p className="text-xs text-slate-400 italic">No friends added yet</p>
+        ) : (
+          <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+            {sortedFriends.map((friend) => {
+              const fId = friend._id || friend.id;
+              const online = isOnline(friend);
+              return (
+                <div
+                  key={fId}
+                  onClick={() => navigate(`/messages?user=${fId}`)}
+                  className="flex items-center justify-between p-1.5 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="relative shrink-0">
+                      <img
+                        src={
+                          friend.avatar ||
+                          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
+                        }
+                        alt={friend.username}
+                        className="w-8 h-8 rounded-full object-cover border border-slate-100"
+                      />
+                      {online && (
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
+                      )}
+                    </div>
+                    <span className="text-xs font-semibold text-slate-800 group-hover:text-blue-600 truncate">
+                      {friend.username}
+                    </span>
+                  </div>
+
+                  <MessageSquare className="w-3.5 h-3.5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </aside>
   );

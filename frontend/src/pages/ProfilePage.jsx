@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -133,10 +134,12 @@ export default function ProfilePage() {
       });
       setProfileUser(updatedUser);
       setShowEditModal(false);
+      toast.success("Profile updated successfully!");
       // Refresh stats too
       fetchProfileData();
     } catch (err) {
       console.error("Error updating profile:", err);
+      toast.error(err.message || "Failed to update profile");
     } finally {
       setSavingProfile(false);
     }

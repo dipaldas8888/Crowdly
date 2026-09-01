@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
 import { Mail, Lock, KeyRound, X, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
 
@@ -37,13 +38,12 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
       });
 
       setSuccessMsg(res.message || "Reset OTP sent to email");
-      if (res.devOtp) {
-        console.log(`[DEV OTP]: ${res.devOtp}`);
-      }
+      toast.success("Password reset OTP sent to your email!");
       setStep(2);
       setResendTimer(60);
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || "Failed to send reset code");
     } finally {
       setLoading(false);
     }
@@ -62,6 +62,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
       });
 
       setSuccessMsg(res.message);
+      toast.success("Password reset successfully! You can now log in.");
       setTimeout(() => {
         onClose();
         setStep(1);
@@ -72,6 +73,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
       }, 2000);
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || "Failed to reset password");
     } finally {
       setLoading(false);
     }

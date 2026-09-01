@@ -341,3 +341,75 @@ export const replyComment = async (req, res, next) => {
   }
 };
 
+// Edit a comment (only comment author)
+export const updateComment = async (req, res, next) => {
+  try {
+    const { id: postId, commentId } = req.params;
+    const { text } = req.body;
+    const currentUserId = req.user?.toString();
+
+    if (!text?.trim()) throw new ApiError(400, "Comment text is required");
+
+    const post = await Post.findById(postId);
+    if (!post) throw new ApiError(404, "Post not found");
+
+    const comment = post.comments.id(commentId);
+    if (!comment) throw new ApiError(404, "Comment not found");
+
+    if (comment.user.toString() !== currentUserId) {
+      throw new ApiError(403, "Not authorized to edit this comment");
+    }
+
+    comment.text = text.trim();
+    await post.save();
+
+    const updatedPost = await Post.findById(postId)
+      .populate("user", "username avatar")
+      .populate("likes", "username avatar")
+      .populate("taggedFriends", "username avatar")
+      .populate("group", "name coverImage")
+      .populate("comments.user", "username avatar")
+      .populate("comments.replies.user", "username avatar");
+
+    res.json(updatedPost);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Delete a comment (only post owner OR comment author)
+export const deleteComment = async (req, res, next) => {
+  try {
+    const { id: postId, commentId } = req.params;
+    const currentUserId = req.user?.toString();
+
+    const post = await Post.findById(postId);
+    if (!post) throw new ApiError(404, "Post not found");
+
+    const comment = post.comments.id(commentId);
+    if (!comment) throw new ApiError(404, "Comment not found");
+
+    const isPostOwner = post.user.toString() === currentUserId;
+    const isCommentAuthor = comment.user.toString() === currentUserId;
+
+    if (!isPostOwner && !isCommentAuthor) {
+      throw new ApiError(403, "Only the post owner or comment author can delete this comment");
+    }
+
+    post.comments.pull(commentId);
+    await post.save();
+
+    const updatedPost = await Post.findById(postId)
+      .populate("user", "username avatar")
+      .populate("likes", "username avatar")
+      .populate("taggedFriends", "username avatar")
+      .populate("group", "name coverImage")
+      .populate("comments.user", "username avatar")
+      .populate("comments.replies.user", "username avatar");
+
+    res.json(updatedPost);
+  } catch (err) {
+    next(err);
+  }
+};
+

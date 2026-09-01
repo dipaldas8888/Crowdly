@@ -98,11 +98,19 @@ export const sendMessage = async (req, res, next) => {
     const { text } = req.body;
 
     let imageUrl = "";
+    let fileUrl = "";
+    let fileName = "";
 
     if (req.file) {
+      const isImage = req.file.mimetype?.startsWith("image/");
+      const isPdf = req.file.mimetype === "application/pdf" || req.file.originalname?.endsWith(".pdf");
+
       const uploadResult = await new Promise((resolve, reject) => {
         const uploadStream = cloudinary.uploader.upload_stream(
-          { folder: "crowdly/messages" },
+          {
+            folder: "crowdly/messages",
+            resource_type: isImage ? "image" : "auto",
+          },
           (error, result) => {
             if (error) reject(error);
             else resolve(result);
@@ -110,11 +118,17 @@ export const sendMessage = async (req, res, next) => {
         );
         uploadStream.end(req.file.buffer);
       });
-      imageUrl = uploadResult.secure_url;
+
+      if (isImage) {
+        imageUrl = uploadResult.secure_url;
+      } else {
+        fileUrl = uploadResult.secure_url;
+        fileName = req.file.originalname || "document.pdf";
+      }
     }
 
-    if (!text && !imageUrl) {
-      throw new ApiError(400, "Message must contain text or an image");
+    if (!text && !imageUrl && !fileUrl) {
+      throw new ApiError(400, "Message must contain text, an image, or a file");
     }
 
     const newMessage = await Message.create({
@@ -122,6 +136,8 @@ export const sendMessage = async (req, res, next) => {
       recipient: partnerId,
       text: text || "",
       image: imageUrl,
+      fileUrl,
+      fileName,
       read: false,
     });
 
@@ -130,6 +146,85 @@ export const sendMessage = async (req, res, next) => {
       .populate("recipient", "username avatar");
 
     res.status(201).json(populatedMessage);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Delete a single message
+export const deleteMessage = async (req, res, next) => {
+  try {
+    const currentUserId = req.user?._id || req.user;
+    const { messageId } = req.params;
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      throw new ApiError(404, "Message not found");
+    }
+
+    if (
+      message.sender.toString() !== currentUserId.toString() &&
+      message.recipient.toString() !== currentUserId.toString()
+    ) {
+      throw new ApiError(403, "Not authorized to delete this message");
+    }
+
+    await Message.findByIdAndDelete(messageId);
+
+    res.json({ message: "Message deleted successfully", messageId });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Edit a single message
+export const editMessage = async (req, res, next) => {
+  try {
+    const currentUserId = req.user?._id || req.user;
+    const { messageId } = req.params;
+    const { text } = req.body;
+
+    if (!text?.trim()) {
+      throw new ApiError(400, "Message text is required");
+    }
+
+    const message = await Message.findById(messageId);
+    if (!message) {
+      throw new ApiError(404, "Message not found");
+    }
+
+    if (message.sender.toString() !== currentUserId.toString()) {
+      throw new ApiError(403, "Not authorized to edit this message");
+    }
+
+    message.text = text.trim();
+    message.isEdited = true;
+    await message.save();
+
+    const updatedMessage = await Message.findById(messageId)
+      .populate("sender", "username avatar")
+      .populate("recipient", "username avatar");
+
+    res.json(updatedMessage);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Delete an entire conversation with a user
+export const deleteConversation = async (req, res, next) => {
+  try {
+    const currentUserId = req.user?._id || req.user;
+    const { userId: partnerId } = req.params;
+
+    await Message.deleteMany({
+      $or: [
+        { sender: currentUserId, recipient: partnerId },
+        { sender: partnerId, recipient: currentUserId },
+      ],
+    });
+
+    res.json({ message: "Conversation deleted successfully", partnerId });
   } catch (err) {
     next(err);
   }

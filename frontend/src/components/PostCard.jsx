@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
 import {
@@ -15,9 +16,9 @@ import {
   X,
   Upload,
   CornerDownRight,
-  ThumbsUp,
   ChevronDown,
   ChevronUp,
+  Check,
 } from "lucide-react";
 
 const DEFAULT_AVATAR =
@@ -37,15 +38,30 @@ function formatTime(dateString) {
   });
 }
 
-// ─── Single Comment Row (with replies) ──────────────────────────────────────
-function CommentRow({ comment, postId, user, setPosts, depth = 0 }) {
+// ─── Single Comment Row (with edit/delete ON THE COMMENT CARD ONLY) ───────────────
+function CommentRow({ comment, postId, postOwnerId, user, setPosts, depth = 0 }) {
   const [showReplyInput, setShowReplyInput] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const [showReplies, setShowReplies] = useState(false);
+  const [showCommentMenu, setShowCommentMenu] = useState(false);
+
+  // Edit comment states
+  const [isEditingComment, setIsEditingComment] = useState(false);
+  const [editCommentText, setEditCommentText] = useState(comment.text || "");
+  const [savingCommentEdit, setSavingCommentEdit] = useState(false);
+
+  const commentUserId = comment.user?._id || comment.user;
+  const currentUserId = user?._id || user?.id;
+
+  // Authorization flags
+  const isCommentAuthor = commentUserId === currentUserId;
+  const isPostOwner = postOwnerId === currentUserId;
+  const canDeleteComment = isCommentAuthor || isPostOwner;
+  const canEditComment = isCommentAuthor;
 
   const commentLiked = comment.likes?.some(
-    (l) => (l._id || l) === user?._id
+    (l) => (l._id || l) === currentUserId
   );
   const replyCount = comment.replies?.length || 0;
 
@@ -58,11 +74,11 @@ function CommentRow({ comment, postId, user, setPosts, depth = 0 }) {
           ...p,
           comments: p.comments.map((c) => {
             if (c._id !== comment._id) return c;
-            const alreadyLiked = c.likes?.some((l) => (l._id || l) === user?._id);
+            const alreadyLiked = c.likes?.some((l) => (l._id || l) === currentUserId);
             return {
               ...c,
               likes: alreadyLiked
-                ? c.likes.filter((l) => (l._id || l) !== user?._id)
+                ? c.likes.filter((l) => (l._id || l) !== currentUserId)
                 : [...(c.likes || []), user],
             };
           }),
@@ -80,6 +96,42 @@ function CommentRow({ comment, postId, user, setPosts, depth = 0 }) {
     }
   };
 
+  const handleSaveCommentEdit = async () => {
+    if (!editCommentText.trim() || savingCommentEdit) return;
+    try {
+      setSavingCommentEdit(true);
+      const updatedPost = await apiRequest(
+        `/posts/${postId}/comments/${comment._id}`,
+        { method: "PUT", body: { text: editCommentText.trim() } }
+      );
+      setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
+      setIsEditingComment(false);
+      setShowCommentMenu(false);
+      toast.success("Comment updated!");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to update comment");
+    } finally {
+      setSavingCommentEdit(false);
+    }
+  };
+
+  const handleDeleteComment = async () => {
+    if (!window.confirm("Are you sure you want to delete this comment?")) return;
+    try {
+      const updatedPost = await apiRequest(
+        `/posts/${postId}/comments/${comment._id}`,
+        { method: "DELETE" }
+      );
+      setPosts((prev) => prev.map((p) => (p._id === postId ? updatedPost : p)));
+      setShowCommentMenu(false);
+      toast.info("Comment deleted.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to delete comment");
+    }
+  };
+
   const handleSendReply = async () => {
     if (!replyText.trim() || sendingReply) return;
     try {
@@ -92,33 +144,111 @@ function CommentRow({ comment, postId, user, setPosts, depth = 0 }) {
       setReplyText("");
       setShowReplyInput(false);
       setShowReplies(true);
+      toast.success("Reply added!");
     } catch (err) {
       console.error(err);
+      toast.error(err.message || "Failed to add reply");
     } finally {
       setSendingReply(false);
     }
   };
 
   return (
-    <div className={`flex gap-2.5 group ${depth > 0 ? "ml-9 mt-2" : ""}`}>
+    <div className={`flex gap-2.5 group/commentRow ${depth > 0 ? "ml-9 mt-2" : ""}`}>
       <img
         src={comment.user?.avatar || DEFAULT_AVATAR}
         alt={comment.user?.username}
         className="w-8 h-8 rounded-full object-cover shrink-0 mt-0.5 border border-slate-100"
       />
       <div className="flex-1 min-w-0">
-        {/* Comment bubble */}
-        <div className="bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-sm px-3.5 py-2.5 inline-block max-w-full">
-          <span className="text-xs font-bold text-slate-800 block leading-tight">
-            {comment.user?.username || "User"}
-          </span>
-          <p className="text-xs text-slate-700 leading-relaxed mt-0.5 break-words">
-            {comment.text}
-          </p>
-        </div>
+        {/* Comment Card / Inline Editor */}
+        {isEditingComment ? (
+          <div className="flex items-center gap-1.5 bg-white border border-blue-500 rounded-2xl px-3 py-1.5 max-w-full shadow-xs">
+            <input
+              type="text"
+              value={editCommentText}
+              onChange={(e) => setEditCommentText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSaveCommentEdit();
+                }
+              }}
+              className="flex-1 text-xs outline-none text-slate-800 bg-transparent"
+              autoFocus
+            />
+            <button
+              onClick={handleSaveCommentEdit}
+              disabled={savingCommentEdit}
+              className="text-emerald-600 hover:text-emerald-700 cursor-pointer p-0.5"
+              title="Save"
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setIsEditingComment(false)}
+              className="text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+              title="Cancel"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 max-w-full group/card relative">
+            {/* Comment Card Bubble */}
+            <div className="bg-slate-100/80 border border-slate-200/60 rounded-2xl rounded-tl-sm px-3.5 py-2.5 inline-block max-w-full">
+              <span className="text-xs font-bold text-slate-900 block leading-tight">
+                {comment.user?.username || "User"}
+              </span>
+              <p className="text-xs text-slate-800 leading-relaxed mt-0.5 break-words">
+                {comment.text}
+              </p>
+            </div>
 
-        {/* Actions row */}
-        <div className="flex items-center gap-3 mt-1.5 ml-1 flex-wrap">
+            {/* ── Edit & Delete options directly ON THE COMMENT CARD (visible on hover) ── */}
+            {(canEditComment || canDeleteComment) && (
+              <div className="relative shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity">
+                <button
+                  onClick={() => setShowCommentMenu((prev) => !prev)}
+                  className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 rounded-full transition-colors cursor-pointer"
+                  title="Comment options"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+
+                {showCommentMenu && (
+                  <div className="absolute left-full top-0 ml-1 bg-white border border-slate-200 rounded-xl shadow-lg z-30 py-1 w-32 text-xs font-medium">
+                    {canEditComment && (
+                      <button
+                        onClick={() => {
+                          setIsEditingComment(true);
+                          setEditCommentText(comment.text);
+                          setShowCommentMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                    {canDeleteComment && (
+                      <button
+                        onClick={handleDeleteComment}
+                        className="w-full text-left px-3 py-1.5 hover:bg-rose-50 flex items-center gap-2 text-rose-600 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Actions row (Time, Like, Reply ONLY - edit/delete are strictly on the card) */}
+        <div className="flex items-center gap-3 mt-1 ml-1 flex-wrap">
           <span className="text-[10px] text-slate-400 font-medium">
             {formatTime(comment.createdAt)}
           </span>
@@ -218,11 +348,11 @@ function CommentRow({ comment, postId, user, setPosts, depth = 0 }) {
                   className="w-7 h-7 rounded-full object-cover shrink-0 mt-0.5 border border-slate-100"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-sm px-3 py-2 inline-block max-w-full">
-                    <span className="text-xs font-bold text-slate-800 block leading-tight">
+                  <div className="bg-slate-100/80 border border-slate-200/60 rounded-2xl rounded-tl-sm px-3 py-2 inline-block max-w-full">
+                    <span className="text-xs font-bold text-slate-900 block leading-tight">
                       {reply.user?.username || "User"}
                     </span>
-                    <p className="text-xs text-slate-700 leading-relaxed mt-0.5 break-words">
+                    <p className="text-xs text-slate-800 leading-relaxed mt-0.5 break-words">
                       {reply.text}
                     </p>
                   </div>
@@ -230,13 +360,6 @@ function CommentRow({ comment, postId, user, setPosts, depth = 0 }) {
                     <span className="text-[10px] text-slate-400 font-medium">
                       {formatTime(reply.createdAt)}
                     </span>
-                    <button className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-rose-500 transition-colors cursor-pointer">
-                      <Heart className="w-3 h-3" />
-                      {reply.likes?.length > 0 && (
-                        <span>{reply.likes.length}</span>
-                      )}
-                      <span>Like</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -262,7 +385,8 @@ export default function PostCard({ post, setPosts }) {
   const [copiedShare, setCopiedShare] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
 
-  const isOwner = post.user?._id === user?._id || post.user === user?._id;
+  const postOwnerId = post.user?._id || post.user;
+  const isOwner = postOwnerId === user?._id || postOwnerId === user?.id;
   const isLiked = post.likes?.some((u) => (u._id || u) === user?._id);
 
   const handleLike = async () => {
@@ -317,8 +441,10 @@ export default function PostCard({ post, setPosts }) {
       setPosts((prev) =>
         prev.map((p) => (p._id === post._id ? updatedPost : p))
       );
+      toast.success("Comment posted!");
     } catch (err) {
       console.error(err);
+      toast.error(err.message || "Failed to post comment");
     } finally {
       setSendingComment(false);
     }
@@ -329,8 +455,10 @@ export default function PostCard({ post, setPosts }) {
     try {
       await apiRequest(`/posts/${post._id}`, { method: "DELETE" });
       setPosts((prev) => prev.filter((p) => p._id !== post._id));
+      toast.info("Post deleted.");
     } catch (err) {
       console.error(err);
+      toast.error(err.message || "Failed to delete post");
     }
   };
 
@@ -348,10 +476,12 @@ export default function PostCard({ post, setPosts }) {
       setPosts((prev) =>
         prev.map((p) => (p._id === post._id ? updatedPost : p))
       );
+      toast.success("Post updated successfully!");
       setIsEditing(false);
       setShowMenu(false);
     } catch (err) {
       console.error(err);
+      toast.error(err.message || "Failed to update post");
     } finally {
       setEditLoading(false);
     }
@@ -369,6 +499,7 @@ export default function PostCard({ post, setPosts }) {
       );
       navigator.clipboard?.writeText(window.location.href);
       setCopiedShare(true);
+      toast.success("Post link copied to clipboard!");
       setTimeout(() => setCopiedShare(false), 2000);
     } catch (err) {
       console.error(err);
@@ -380,7 +511,9 @@ export default function PostCard({ post, setPosts }) {
   return (
     <div
       className="bg-white rounded-2xl border border-slate-200/80 shadow-xs mb-5 overflow-hidden transition-shadow hover:shadow-sm relative"
-      onClick={() => showMenu && setShowMenu(false)}
+      onClick={() => {
+        if (showMenu) setShowMenu(false);
+      }}
     >
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 pt-4 pb-3">
@@ -605,6 +738,7 @@ export default function PostCard({ post, setPosts }) {
                   key={c._id || i}
                   comment={c}
                   postId={post._id}
+                  postOwnerId={postOwnerId}
                   user={user}
                   setPosts={setPosts}
                   depth={0}

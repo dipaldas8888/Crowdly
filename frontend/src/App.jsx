@@ -48,6 +48,8 @@ const requireAuth = async () => {
 };
 
 import { SocketProvider } from "./context/SocketContext";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function AppShell() {
   return (
@@ -56,6 +58,15 @@ function AppShell() {
       <AuthProvider>
         <SocketProvider>
           <Outlet />
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            pauseOnHover
+            theme="light"
+          />
         </SocketProvider>
       </AuthProvider>
     </ThemeProvider>

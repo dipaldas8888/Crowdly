@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { ShieldCheck, X, Loader2, RefreshCw } from "lucide-react";
@@ -45,10 +46,12 @@ export default function RegisterOTPModal({
         },
       });
 
+      toast.success("Registration successful! Welcome to Crowdly.");
       setUser(user);
       onSuccess();
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || "Failed to verify OTP");
     } finally {
       setLoading(false);
     }
@@ -62,9 +65,11 @@ export default function RegisterOTPModal({
         method: "POST",
         body: { email: registerData.email },
       });
+      toast.info("A new OTP code has been sent to your email.");
       setResendTimer(60);
     } catch (err) {
       setError(err.message);
+      toast.error(err.message || "Failed to resend OTP");
     } finally {
       setLoading(false);
     }

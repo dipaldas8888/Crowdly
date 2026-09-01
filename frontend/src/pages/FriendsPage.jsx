@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
 import Navbar from "../components/Navbar";
 import LeftSidebar from "../components/LeftSidebar";
@@ -76,17 +77,21 @@ export default function FriendsPage() {
             : u,
         ),
       );
+      toast.success("Friend request sent!");
     } catch (err) {
       console.log(err);
+      toast.error(err.message || "Failed to send request");
     }
   };
 
   const handleAcceptRequest = async (userId) => {
     try {
       await apiRequest(`/friends/accept/${userId}`, { method: "PUT" });
+      toast.success("Friend request accepted!");
       fetchFriendsData();
     } catch (err) {
       console.log(err);
+      toast.error(err.message || "Failed to accept request");
     }
   };
 
@@ -94,8 +99,10 @@ export default function FriendsPage() {
     try {
       await apiRequest(`/friends/reject/${userId}`, { method: "PUT" });
       setRequests((prev) => prev.filter((u) => u._id !== userId));
+      toast.info("Friend request declined.");
     } catch (err) {
       console.log(err);
+      toast.error(err.message || "Failed to decline request");
     }
   };
 
@@ -105,19 +112,21 @@ export default function FriendsPage() {
     try {
       await apiRequest(`/friends/remove/${userId}`, { method: "DELETE" });
       setFriends((prev) => prev.filter((u) => u._id !== userId));
+      toast.info("Friend removed.");
     } catch (err) {
       console.log(err);
+      toast.error(err.message || "Failed to remove friend");
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 antialiased flex flex-col">
       <Navbar />
 
-      <div className="max-w-[1600px] w-full mx-auto flex flex-1 pt-4 px-4 md:px-6 gap-6">
+      <div className="flex flex-1 w-full max-w-[1600px] mx-auto justify-between items-start">
         <LeftSidebar />
 
-        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-4 px-2 sm:px-4 md:px-6 w-full space-y-6 pb-12">
+        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-6 px-4 md:px-8 w-full space-y-6 pb-12">
           {/* Header Banner */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-4">

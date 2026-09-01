@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { toast } from "react-toastify";
 import Navbar from "../components/Navbar";
 import LeftSidebar from "../components/LeftSidebar";
 import RightSidebar from "../components/RightSidebar";
@@ -89,12 +90,14 @@ export default function WatchPage() {
       });
 
       setVideos((prev) => [newVid, ...prev]);
+      toast.success("Video uploaded successfully!");
       setShowUploadModal(false);
       setTitle("");
       setDescription("");
       setVideoFile(null);
     } catch (err) {
       setUploadError(err.message);
+      toast.error(err.message || "Failed to upload video");
     } finally {
       setUploading(false);
     }
@@ -149,7 +152,7 @@ export default function WatchPage() {
         ),
       );
       navigator.clipboard?.writeText(window.location.href);
-      alert("Video link copied to clipboard!");
+      toast.success("Video link copied to clipboard!");
     } catch (err) {
       console.log(err);
     }
@@ -161,14 +164,14 @@ export default function WatchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100 font-sans text-slate-800 antialiased flex flex-col">
       <Navbar />
 
-      <div className="max-w-[1600px] w-full mx-auto flex flex-1 pt-4 px-4 md:px-6 gap-6">
+      <div className="flex flex-1 w-full max-w-[1600px] mx-auto justify-between items-start">
         <LeftSidebar />
 
         {/* Center Content: Watch Platform */}
-        <main className="flex-1 max-w-3xl xl:max-w-4xl mx-auto space-y-5 pb-12">
+        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-6 px-4 md:px-8 w-full space-y-6 pb-12">
           {/* Header Action Bar */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
