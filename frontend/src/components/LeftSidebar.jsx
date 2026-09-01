@@ -48,7 +48,7 @@ export default function LeftSidebar() {
     {
       icon: Tv,
       label: "Watch",
-      path: "#",
+      path: "/watch",
       color: "text-purple-500 bg-purple-50",
     },
     {
@@ -83,6 +83,7 @@ export default function LeftSidebar() {
     {
       icon: MessageSquare,
       label: "Messages",
+      path: "/messages",
       color: "text-teal-500 bg-teal-50",
     },
   ];
@@ -106,12 +107,12 @@ export default function LeftSidebar() {
   ];
 
   return (
-    <aside className="w-64 xl:w-72 shrink-0 hidden md:block bg-white border-r border-slate-200/80 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-4 scrollbar-thin">
-      <div className="space-y-5">
+    <aside className="w-60 xl:w-64 shrink-0 hidden md:block bg-white border-r border-slate-200/80 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-3.5 scrollbar-thin">
+      <div className="space-y-4">
         {/* User Profile Header */}
         <Link
           to="/profile"
-          className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
+          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
         >
           <img
             src={
@@ -127,7 +128,7 @@ export default function LeftSidebar() {
         </Link>
 
         {/* Main Navigation Links */}
-        <nav className="space-y-1">
+        <nav className="space-y-0.5">
           {mainItems.map((item, idx) => {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
@@ -135,10 +136,10 @@ export default function LeftSidebar() {
               <Link
                 key={idx}
                 to={item.path}
-                className={`flex items-center gap-3.5 px-3 py-2.5 rounded-xl cursor-pointer transition-all group ${
+                className={`flex items-center gap-3 px-2.5 py-2 rounded-xl cursor-pointer transition-all group ${
                   isActive
                     ? "bg-blue-50/80 text-blue-600 font-semibold"
-                    : "hover:bg-slate-100 text-slate-700"
+                    : "hover:bg-slate-100 text-slate-700 font-medium"
                 }`}
               >
                 <div
@@ -146,60 +147,60 @@ export default function LeftSidebar() {
                 >
                   <Icon className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-semibold">{item.label}</span>
+                <span className="text-xs sm:text-sm">{item.label}</span>
               </Link>
             );
           })}
         </nav>
 
         {/* Divider & Your Shortcuts */}
-        <div className="pt-3 border-t border-slate-100">
-          <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+        <div className="pt-2 border-t border-slate-100">
+          <p className="px-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
             Your shortcuts
           </p>
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {shortcuts.map((item, idx) => {
               const Icon = item.icon;
               return (
-                <a
+                <Link
                   key={idx}
-                  href="#"
-                  className="flex items-center gap-3.5 px-3 py-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors group"
+                  to={item.path || "#"}
+                  className="flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors group text-slate-700 font-medium"
                 >
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.color} group-hover:scale-105 transition-transform`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900">
+                  <span className="text-xs sm:text-sm group-hover:text-slate-900">
                     {item.label}
                   </span>
-                </a>
+                </Link>
               );
             })}
           </nav>
         </div>
 
         {/* Divider & Others */}
-        <div className="pt-3 border-t border-slate-100">
-          <p className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+        <div className="pt-2 border-t border-slate-100">
+          <p className="px-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
             Others
           </p>
-          <nav className="space-y-1">
+          <nav className="space-y-0.5">
             {others.map((item, idx) => {
               const Icon = item.icon;
               return (
                 <a
                   key={idx}
                   href="#"
-                  className="flex items-center gap-3.5 px-3 py-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors group"
+                  className="flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors group text-slate-700 font-medium"
                 >
                   <div
                     className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.color} group-hover:scale-105 transition-transform`}
                   >
                     <Icon className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900">
+                  <span className="text-xs sm:text-sm group-hover:text-slate-900">
                     {item.label}
                   </span>
                 </a>

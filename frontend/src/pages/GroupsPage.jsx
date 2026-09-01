@@ -134,21 +134,21 @@ export default function GroupsPage() {
         <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-6 px-4 md:px-8 w-full space-y-6">
           {/* Header Banner */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Groups & Communities</h1>
-                <p className="text-xs text-slate-400">Discover communities, share group posts, or create your own group</p>
+                <h1 className="text-2xl font-bold text-slate-900">Groups & Communities</h1>
+                <p className="text-sm text-slate-500 mt-0.5">Discover communities, share group posts, or create your own group</p>
               </div>
             </div>
 
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
             >
-              <Plus className="w-4 h-4 stroke-[2.5]" />
+              <Plus className="w-4.5 h-4.5 stroke-[2.5]" />
               <span>Create Group</span>
             </button>
           </div>
@@ -158,7 +158,7 @@ export default function GroupsPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab("discover")}
-                className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                className={`px-4 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer ${
                   activeTab === "discover"
                     ? "bg-blue-600 text-white shadow-xs"
                     : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
@@ -168,7 +168,7 @@ export default function GroupsPage() {
               </button>
               <button
                 onClick={() => setActiveTab("my")}
-                className={`px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                className={`px-4 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer ${
                   activeTab === "my"
                     ? "bg-blue-600 text-white shadow-xs"
                     : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
@@ -179,13 +179,13 @@ export default function GroupsPage() {
             </div>
 
             <form onSubmit={handleSearch} className="relative flex-1 max-w-xs">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4.5 h-4.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search groups..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-1.5 text-xs text-slate-800 outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-800 outline-none focus:ring-1 focus:ring-blue-500"
               />
             </form>
           </div>
@@ -198,8 +198,8 @@ export default function GroupsPage() {
               ))}
             </div>
           ) : displayedGroups.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400">
-              <p className="text-sm">No groups found.</p>
+            <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 text-slate-400">
+              <p className="text-base">No groups found.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -222,22 +222,22 @@ export default function GroupsPage() {
                         alt={group.name}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
-                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[10px] font-semibold bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded-md uppercase">
+                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-xs font-bold bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-lg uppercase">
                         {group.privacy === "public" ? (
-                          <Globe className="w-3 h-3" />
+                          <Globe className="w-3.5 h-3.5" />
                         ) : (
-                          <Lock className="w-3 h-3" />
+                          <Lock className="w-3.5 h-3.5" />
                         )}
                         {group.privacy}
                       </span>
                     </div>
 
                     {/* Content Body */}
-                    <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
                         <Link
                           to={`/groups/${group._id}`}
-                          className="font-bold text-slate-900 text-base hover:text-blue-600 transition-colors block"
+                          className="font-bold text-slate-900 text-lg hover:text-blue-600 transition-colors block"
                         >
                           {group.name}
                         </Link>

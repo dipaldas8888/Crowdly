@@ -12,6 +12,8 @@ import FriendsPage from "./pages/FriendsPage";
 import GroupsPage from "./pages/GroupsPage";
 import GroupDetailPage from "./pages/GroupDetailPage";
 import ProfilePage from "./pages/ProfilePage";
+import MessagesPage from "./pages/MessagesPage";
+import WatchPage from "./pages/WatchPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { apiRequest } from "./lib/api";
 import "./App.css";
@@ -45,16 +47,21 @@ const requireAuth = async () => {
   }
 };
 
+import { SocketProvider } from "./context/SocketContext";
+
 function AppShell() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Outlet />
+        <SocketProvider>
+          <Outlet />
+        </SocketProvider>
       </AuthProvider>
     </ThemeProvider>
   );
 }
+
 
 function ProtectedLayout() {
   const { user, authLoading } = useAuth();
@@ -112,6 +119,14 @@ export const router = createBrowserRouter([
           {
             path: "profile/:id",
             element: <ProfilePage />,
+          },
+          {
+            path: "messages",
+            element: <MessagesPage />,
+          },
+          {
+            path: "watch",
+            element: <WatchPage />,
           },
         ],
       },

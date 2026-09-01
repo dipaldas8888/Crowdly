@@ -9,10 +9,10 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
       <div className="max-w-[1600px] mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
         {/* Brand Logo */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <Link
             to="/home"
-            className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight cursor-pointer"
+            className="text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent tracking-tight cursor-pointer leading-none"
           >
             Crowdly
           </Link>
@@ -25,17 +25,21 @@ export default function Navbar() {
             <input
               type="text"
               placeholder="Search Crowdly..."
-              className="w-full bg-slate-100/80 border border-transparent rounded-full pl-10 pr-4 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
+              className="w-full bg-slate-100/80 border border-transparent rounded-full pl-9 pr-4 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none transition-all"
             />
           </div>
         </div>
 
         {/* Right Section: User & Logout */}
-        <div className="flex items-center gap-3">
-          <button className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors hidden sm:block cursor-pointer">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <Link
+            to="/messages"
+            className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors hidden sm:flex items-center justify-center cursor-pointer"
+            title="Messages"
+          >
             <MessageSquare className="w-4 h-4" />
-          </button>
-          <button className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors hidden sm:block cursor-pointer">
+          </Link>
+          <button className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors hidden sm:flex items-center justify-center cursor-pointer">
             <Bell className="w-4 h-4" />
           </button>
 
@@ -51,14 +55,14 @@ export default function Navbar() {
               alt={user?.username || "User"}
               className="w-8 h-8 rounded-full object-cover border border-slate-200"
             />
-            <span className="text-xs font-semibold text-slate-800 hidden sm:inline-block">
+            <span className="text-xs sm:text-sm font-semibold text-slate-800 hidden sm:inline-block">
               {user?.username}
             </span>
           </Link>
 
           <button
             onClick={logout}
-            className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer ml-1"
+            className="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer ml-1"
             title="Logout"
           >
             <LogOut className="w-3.5 h-3.5" />

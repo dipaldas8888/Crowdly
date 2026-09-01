@@ -44,11 +44,11 @@ export default function Stories() {
   ];
 
   return (
-    <div className="grid grid-cols-5 gap-2.5 sm:gap-3 mb-6">
+    <div className="grid grid-cols-5 gap-2.5 sm:gap-3.5 mb-6">
       {stories.map((story) => (
         <div
           key={story.id}
-          className="relative h-44 sm:h-52 rounded-2xl overflow-hidden cursor-pointer group shadow-xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
+          className="relative h-48 sm:h-56 rounded-2xl overflow-hidden cursor-pointer group shadow-xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
         >
           {/* Background Cover Image */}
           <img
@@ -63,16 +63,16 @@ export default function Stories() {
           {/* User Add Badge or Story Content */}
           {story.isUser ? (
             <div className="absolute bottom-3 left-3 right-3 flex flex-col items-start gap-1">
-              <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center text-white border-2 border-white shadow-md mb-0.5">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white border-2 border-white shadow-md mb-0.5">
                 <Plus className="w-4 h-4 stroke-[3]" />
               </div>
-              <span className="text-xs font-semibold text-white truncate max-w-full drop-shadow-md">
+              <span className="text-sm font-semibold text-white truncate max-w-full drop-shadow-md">
                 {story.name}
               </span>
             </div>
           ) : (
             <div className="absolute bottom-3 left-3 right-3">
-              <span className="text-xs font-semibold text-white truncate block drop-shadow-md">
+              <span className="text-sm font-semibold text-white truncate block drop-shadow-md">
                 {story.name}
               </span>
             </div>

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiRequest } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
@@ -16,19 +16,22 @@ import {
   Heart,
   MessageCircle,
   Camera,
-  Upload,
   X,
   Loader2,
   Film,
   Image as ImageIcon,
+  LayoutGrid,
+  FileText,
 } from "lucide-react";
 
 export default function ProfilePage() {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
-  const profileUserId = !id || id === "me" ? currentUser?._id : id;
+  // Determine whose profile to show
   const isOwnProfile = !id || id === "me" || id === currentUser?._id;
+  const profileUserId = isOwnProfile ? currentUser?._id : id;
 
   const [profileUser, setProfileUser] = useState(null);
   const [stats, setStats] = useState({
@@ -42,11 +45,11 @@ export default function ProfilePage() {
     groupsCount: 0,
   });
 
-  const [activeTab, setActiveTab] = useState("photos"); // posts | photos | videos | likes
+  // Default to "posts" tab so posts load immediately
+  const [activeTab, setActiveTab] = useState("posts");
   const [posts, setPosts] = useState([]);
   const [photos, setPhotos] = useState([]);
   const [videos, setVideos] = useState([]);
-  const [likedPosts, setLikedPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [contentLoading, setContentLoading] = useState(false);
 
@@ -59,57 +62,59 @@ export default function ProfilePage() {
   const [editCover, setEditCover] = useState(null);
   const [savingProfile, setSavingProfile] = useState(false);
 
-  const fetchProfileData = async () => {
+  // Fetch profile info + stats
+  const fetchProfileData = useCallback(async () => {
+    if (!profileUserId) return; // Wait until we have an ID
     try {
       setLoading(true);
-      const res = await apiRequest(`/users/profile/${profileUserId || "me"}`);
+      const res = await apiRequest(`/users/profile/${profileUserId}`);
       setProfileUser(res.user);
       setStats(res.stats || {});
-
       setEditUsername(res.user?.username || "");
       setEditHandle(res.user?.handle || "");
       setEditBio(res.user?.bio || "");
     } catch (err) {
-      console.log(err);
+      console.error("Error fetching profile:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [profileUserId]);
 
-  const fetchTabContent = async (tab) => {
+  // Fetch content for a specific tab
+  const fetchTabContent = useCallback(async (tab) => {
+    if (!profileUserId) return;
     try {
       setContentLoading(true);
-      const targetId = profileUserId || "me";
-
       if (tab === "posts") {
-        const data = await apiRequest(`/users/profile/${targetId}/posts`);
-        setPosts(data || []);
+        const data = await apiRequest(`/users/profile/${profileUserId}/posts`);
+        setPosts(Array.isArray(data) ? data : []);
       } else if (tab === "photos") {
-        const data = await apiRequest(`/users/profile/${targetId}/photos`);
-        setPhotos(data || []);
+        const data = await apiRequest(`/users/profile/${profileUserId}/photos`);
+        setPhotos(Array.isArray(data) ? data : []);
       } else if (tab === "videos") {
-        const data = await apiRequest(`/users/profile/${targetId}/videos`);
-        setVideos(data || []);
-      } else if (tab === "likes") {
-        const data = await apiRequest(`/users/profile/${targetId}/likes`);
-        setLikedPosts(data || []);
+        const data = await apiRequest(`/users/profile/${profileUserId}/videos`);
+        setVideos(Array.isArray(data) ? data : []);
       }
     } catch (err) {
-      console.log(err);
+      console.error(`Error fetching ${tab}:`, err);
     } finally {
       setContentLoading(false);
     }
-  };
+  }, [profileUserId]);
 
+  // Fetch profile once we know who we're looking at
   useEffect(() => {
-    fetchProfileData();
-  }, [id, currentUser]);
+    if (profileUserId) {
+      fetchProfileData();
+    }
+  }, [fetchProfileData, profileUserId]);
 
+  // Fetch tab content when tab changes or profile loads
   useEffect(() => {
-    if (profileUser) {
+    if (profileUser && profileUserId) {
       fetchTabContent(activeTab);
     }
-  }, [activeTab, profileUser]);
+  }, [activeTab, profileUser, fetchTabContent]);
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
@@ -117,7 +122,6 @@ export default function ProfilePage() {
     formData.append("username", editUsername);
     formData.append("handle", editHandle);
     formData.append("bio", editBio);
-
     if (editAvatar) formData.append("avatar", editAvatar);
     if (editCover) formData.append("coverImage", editCover);
 
@@ -127,15 +131,22 @@ export default function ProfilePage() {
         method: "PUT",
         body: formData,
       });
-
       setProfileUser(updatedUser);
       setShowEditModal(false);
+      // Refresh stats too
+      fetchProfileData();
     } catch (err) {
-      console.log(err);
+      console.error("Error updating profile:", err);
     } finally {
       setSavingProfile(false);
     }
   };
+
+  // Callback passed to CreatePost: prepends new post and increments postsCount
+  const handlePostCreated = useCallback((newPost) => {
+    setPosts((prev) => [newPost, ...prev]);
+    setStats((prev) => ({ ...prev, postsCount: (prev.postsCount || 0) + 1 }));
+  }, []);
 
   if (loading) {
     return (
@@ -148,9 +159,13 @@ export default function ProfilePage() {
     );
   }
 
-  const userDisplayName = profileUser?.username || "John Doe";
-  const userHandle = profileUser?.handle || `@${userDisplayName.toLowerCase().replace(/\s+/g, "")}`;
-  const userBio = profileUser?.bio || "Look again at that dot. That's here. That's home. That's us. On it everyone you love, everyone you know, lived out their lives.";
+  const userDisplayName = profileUser?.username || "User";
+  const userHandle =
+    profileUser?.handle ||
+    `@${userDisplayName.toLowerCase().replace(/\s+/g, "")}`;
+  const userBio =
+    profileUser?.bio ||
+    "No bio added yet.";
 
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 antialiased flex flex-col">
@@ -160,7 +175,7 @@ export default function ProfilePage() {
         <LeftSidebar />
 
         <main className="flex-1 min-w-0 max-w-4xl mx-auto py-6 px-4 md:px-8 w-full space-y-6">
-          {/* Top Full-Width Cover Banner Card */}
+          {/* Cover Banner Card */}
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs overflow-hidden relative">
             <div className="h-56 md:h-72 bg-slate-200 relative overflow-hidden">
               <img
@@ -182,7 +197,7 @@ export default function ProfilePage() {
               )}
             </div>
 
-            {/* Overlapping Profile Avatar */}
+            {/* Avatar overlapping cover */}
             <div className="-mt-14 md:-mt-18 ml-6 md:ml-10 relative z-10 flex items-end justify-between pr-6 mb-4">
               <div className="relative group">
                 <img
@@ -204,7 +219,6 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Header Action Buttons (Message / Edit Profile) */}
               <div className="flex items-center gap-2">
                 <button className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition-colors cursor-pointer border border-slate-200">
                   <Bookmark className="w-4 h-4" />
@@ -217,7 +231,10 @@ export default function ProfilePage() {
                     Edit Profile
                   </button>
                 ) : (
-                  <button className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5">
+                  <button
+                    onClick={() => navigate(`/messages?user=${profileUser?._id}`)}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5"
+                  >
                     <MessageSquare className="w-4 h-4" />
                     <span>Message</span>
                   </button>
@@ -226,138 +243,156 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Main Layout Grid: Left Profile Info Sidebar + Right Tab Feeds */}
+          {/* Main grid: left bio + right tabs */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-            {/* Left Column: User Info & Stats Box */}
+            {/* Left: Bio & Stats */}
             <div className="md:col-span-4 space-y-4">
-              {/* User Bio & Details */}
               <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <h2 className="text-xl font-bold text-slate-900">{userDisplayName}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl md:text-2xl font-extrabold text-slate-900">
+                    {userDisplayName}
+                  </h2>
                   <BadgeCheck className="w-5 h-5 text-blue-500 fill-blue-50" />
                 </div>
-                <p className="text-xs text-slate-400 font-medium">{userHandle}</p>
-                <p className="text-xs text-slate-600 leading-relaxed pt-1">{userBio}</p>
+                <p className="text-xs text-slate-500 font-semibold">{userHandle}</p>
+                <p className="text-sm text-slate-700 leading-relaxed pt-1">{userBio}</p>
               </div>
 
-              {/* Stats Card Box */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs grid grid-cols-2 gap-4 text-left">
+              {/* Stats grid */}
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs grid grid-cols-2 gap-4 text-left">
                 <div>
-                  <h4 className="text-base font-bold text-slate-900">
-                    {stats.followersCount > 1000 ? `${(stats.followersCount / 1000).toFixed(1)}k` : stats.followersCount || 12}
+                  <h4 className="text-lg font-black text-slate-900">
+                    {stats.followersCount > 1000
+                      ? `${(stats.followersCount / 1000).toFixed(1)}k`
+                      : stats.followersCount || 0}
                   </h4>
-                  <span className="text-[11px] font-medium text-slate-400">Followers</span>
+                  <span className="text-xs font-semibold text-slate-500">Followers</span>
                 </div>
                 <div>
-                  <h4 className="text-base font-bold text-slate-900">{stats.postsCount || 0}</h4>
-                  <span className="text-[11px] font-medium text-slate-400">Posts</span>
+                  <h4 className="text-lg font-black text-slate-900">
+                    {stats.postsCount || 0}
+                  </h4>
+                  <span className="text-xs font-semibold text-slate-500">Posts</span>
                 </div>
                 <div className="pt-2 border-t border-slate-100">
-                  <h4 className="text-base font-bold text-slate-900">{stats.groupsCount || 0}</h4>
-                  <span className="text-[11px] font-medium text-slate-400">Collections</span>
+                  <h4 className="text-lg font-black text-slate-900">
+                    {stats.photosCount || 0}
+                  </h4>
+                  <span className="text-xs font-semibold text-slate-500">Photos</span>
                 </div>
                 <div className="pt-2 border-t border-slate-100">
-                  <h4 className="text-base font-bold text-slate-900">
-                    {stats.likesCount > 1000 ? `${(stats.likesCount / 1000).toFixed(1)}k` : stats.likesCount || 0}
+                  <h4 className="text-lg font-black text-slate-900">
+                    {stats.videosCount || 0}
                   </h4>
-                  <span className="text-[11px] font-medium text-slate-400">Likes</span>
+                  <span className="text-xs font-semibold text-slate-500">Videos</span>
                 </div>
               </div>
 
-              {/* Joined Badges */}
-              <div className="space-y-2 pt-1">
-                <div className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-slate-200/60">
-                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Joined {new Date(profileUser?.createdAt || Date.now()).toLocaleDateString(undefined, { month: "short", year: "numeric" })}</span>
-                </div>
+              {/* Joined badge */}
+              <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200/60">
+                <Calendar className="w-4 h-4 text-slate-500" />
+                <span>
+                  Joined{" "}
+                  {new Date(
+                    profileUser?.createdAt || Date.now()
+                  ).toLocaleDateString(undefined, {
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
             </div>
 
-            {/* Right Column: Tab Bar & Content Feeds */}
-            <div className="md:col-span-8 space-y-5">
-              {/* Tab Navigation Header Bar */}
-              <div className="bg-white rounded-2xl p-2 border border-slate-200/80 shadow-xs flex items-center justify-between gap-1 overflow-x-auto">
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setActiveTab("posts")}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                      activeTab === "posts"
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span>Posts</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                      activeTab === "posts" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {stats.postsCount || 0}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab("photos")}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                      activeTab === "photos"
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span>Photos</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                      activeTab === "photos" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {stats.photosCount || 0}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab("videos")}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                      activeTab === "videos"
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span>Videos</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                      activeTab === "videos" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {stats.videosCount || 0}
-                    </span>
-                  </button>
-
-                  <button
-                    onClick={() => setActiveTab("likes")}
-                    className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
-                      activeTab === "likes"
-                        ? "bg-blue-600 text-white shadow-xs"
-                        : "text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span>Likes</span>
-                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
-                      activeTab === "likes" ? "bg-blue-700 text-white" : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {stats.likedPostsCount || 0}
-                    </span>
-                  </button>
-                </div>
+            {/* Right: Tabs + Content */}
+            <div className="md:col-span-8 space-y-4">
+              {/* Tab bar */}
+              <div className="bg-white rounded-2xl p-1.5 border border-slate-200/80 shadow-xs flex items-center gap-1 overflow-x-auto">
+                {[
+                  {
+                    key: "posts",
+                    label: "Posts",
+                    count: stats.postsCount || 0,
+                    icon: FileText,
+                  },
+                  {
+                    key: "photos",
+                    label: "Photos",
+                    count: stats.photosCount || 0,
+                    icon: ImageIcon,
+                  },
+                  {
+                    key: "videos",
+                    label: "Videos",
+                    count: stats.videosCount || 0,
+                    icon: Film,
+                  },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        isActive
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{tab.label}</span>
+                      <span
+                        className={`text-xs px-1.5 py-0.5 rounded-md font-bold ${
+                          isActive
+                            ? "bg-blue-700 text-white"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              {/* Tab 1: Posts Feed */}
+              {/* --- Posts Tab --- */}
               {activeTab === "posts" && (
-                <div className="space-y-5">
-                  {isOwnProfile && <CreatePost setPosts={setPosts} />}
+                <div className="space-y-4">
+                  {isOwnProfile && (
+                    <CreatePost
+                      setPosts={(updaterOrPost) => {
+                        // Support both functional updater and direct post object
+                        if (typeof updaterOrPost === "function") {
+                          setPosts(updaterOrPost);
+                        } else {
+                          setPosts((prev) => [updaterOrPost, ...prev]);
+                        }
+                        setStats((prev) => ({
+                          ...prev,
+                          postsCount: (prev.postsCount || 0) + 1,
+                        }));
+                      }}
+                    />
+                  )}
 
                   {contentLoading ? (
                     <div className="space-y-4">
                       {[1, 2].map((i) => (
-                        <div key={i} className="bg-white rounded-2xl h-44 animate-pulse border border-slate-200"></div>
+                        <div
+                          key={i}
+                          className="bg-white rounded-2xl h-44 animate-pulse border border-slate-200"
+                        />
                       ))}
                     </div>
                   ) : posts.length === 0 ? (
-                    <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400">
-                      <p className="text-sm">No posts created yet.</p>
+                    <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 text-slate-400">
+                      <FileText className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                      <p className="text-sm font-semibold">No posts yet.</p>
+                      {isOwnProfile && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          Share your first post above!
+                        </p>
+                      )}
                     </div>
                   ) : (
                     posts.map((post) => (
@@ -367,59 +402,54 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Tab 2: Photos Grid (matching design screenshot) */}
+              {/* --- Photos Tab --- */}
               {activeTab === "photos" && (
                 <div>
                   {contentLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {[1, 2, 3, 4].map((i) => (
-                        <div key={i} className="bg-white rounded-2xl h-64 animate-pulse border border-slate-200"></div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div
+                          key={i}
+                          className="bg-white rounded-2xl aspect-square animate-pulse border border-slate-200"
+                        />
                       ))}
                     </div>
                   ) : photos.length === 0 ? (
-                    <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400">
-                      <ImageIcon className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                      <p className="text-sm">No photos uploaded yet.</p>
+                    <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 text-slate-400">
+                      <ImageIcon className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                      <p className="text-sm font-semibold">No photos yet.</p>
+                      {isOwnProfile && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          Post something with an image to see it here.
+                        </p>
+                      )}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {photos.map((post) => (
                         <div
                           key={post._id}
-                          className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden group hover:shadow-md transition-shadow"
+                          className="bg-slate-200 rounded-2xl overflow-hidden group relative cursor-pointer hover:shadow-md transition-shadow"
+                          style={{ aspectRatio: "1 / 1" }}
                         >
-                          <div className="h-64 bg-slate-200 relative overflow-hidden">
-                            <img
-                              src={post.image}
-                              alt="Photo post"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-
-                          <div className="p-3 flex items-center justify-between gap-2 text-xs">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <img
-                                src={
-                                  post.user?.avatar ||
-                                  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-                                }
-                                alt={post.user?.username}
-                                className="w-6 h-6 rounded-full object-cover border border-slate-100 shrink-0"
-                              />
-                              <span className="font-semibold text-slate-800 truncate">
-                                {post.user?.username || userDisplayName}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-3 text-slate-500 font-medium shrink-0">
-                              <span className="flex items-center gap-1">
-                                <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-50" />
-                                {post.likes?.length || 0}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
-                                {post.comments?.length || 0}
-                              </span>
+                          <img
+                            src={post.image}
+                            alt="Photo"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          {/* Overlay on hover */}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end">
+                            <div className="p-2 w-full opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center gap-3 text-white text-xs font-semibold">
+                                <span className="flex items-center gap-1">
+                                  <Heart className="w-3.5 h-3.5" />
+                                  {post.likes?.length || 0}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  {post.comments?.length || 0}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -429,19 +459,27 @@ export default function ProfilePage() {
                 </div>
               )}
 
-              {/* Tab 3: Videos Grid */}
+              {/* --- Videos Tab --- */}
               {activeTab === "videos" && (
                 <div>
                   {contentLoading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {[1, 2].map((i) => (
-                        <div key={i} className="bg-white rounded-2xl h-56 animate-pulse border border-slate-200"></div>
+                        <div
+                          key={i}
+                          className="bg-white rounded-2xl h-56 animate-pulse border border-slate-200"
+                        />
                       ))}
                     </div>
                   ) : videos.length === 0 ? (
-                    <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400">
-                      <Film className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                      <p className="text-sm">No videos uploaded yet.</p>
+                    <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 text-slate-400">
+                      <Film className="w-10 h-10 mx-auto text-slate-300 mb-3" />
+                      <p className="text-sm font-semibold">No videos yet.</p>
+                      {isOwnProfile && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          Upload a video from the Watch page to see it here.
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -453,35 +491,26 @@ export default function ProfilePage() {
                           <video
                             src={post.video}
                             controls
-                            className="w-full h-56 object-cover bg-black"
+                            className="w-full h-52 object-cover bg-black"
                           />
-                          <div className="p-3 text-xs">
-                            <p className="text-slate-700 font-medium truncate">{post.text || "Video Post"}</p>
+                          <div className="p-3">
+                            <p className="text-xs text-slate-700 font-medium truncate">
+                              {post.text || "Video"}
+                            </p>
+                            <div className="flex items-center gap-3 mt-1.5 text-slate-400">
+                              <span className="flex items-center gap-1 text-xs">
+                                <Heart className="w-3.5 h-3.5" />
+                                {post.likes?.length || 0}
+                              </span>
+                              <span className="flex items-center gap-1 text-xs">
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                {post.comments?.length || 0}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Tab 4: Likes Feed */}
-              {activeTab === "likes" && (
-                <div className="space-y-5">
-                  {contentLoading ? (
-                    <div className="space-y-4">
-                      {[1, 2].map((i) => (
-                        <div key={i} className="bg-white rounded-2xl h-44 animate-pulse border border-slate-200"></div>
-                      ))}
-                    </div>
-                  ) : likedPosts.length === 0 ? (
-                    <div className="bg-white rounded-2xl p-8 text-center border border-slate-200 text-slate-400">
-                      <p className="text-sm">No liked posts yet.</p>
-                    </div>
-                  ) : (
-                    likedPosts.map((post) => (
-                      <PostCard key={post._id} post={post} setPosts={setLikedPosts} />
-                    ))
                   )}
                 </div>
               )}
@@ -490,85 +519,126 @@ export default function ProfilePage() {
 
           {/* Edit Profile Modal */}
           {showEditModal && (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h3 className="text-base font-bold text-slate-900">Edit Profile</h3>
+                  <h3 className="text-lg font-bold text-slate-900">Edit Profile</h3>
                   <button
                     onClick={() => setShowEditModal(false)}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
                 </div>
 
-                <form onSubmit={handleUpdateProfile} className="space-y-3 text-xs">
+                <form onSubmit={handleUpdateProfile} className="space-y-4 text-xs">
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Display Name</label>
+                    <label className="font-semibold text-slate-700 block mb-1.5">
+                      Display Name *
+                    </label>
                     <input
                       type="text"
                       value={editUsername}
                       onChange={(e) => setEditUsername(e.target.value)}
                       required
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:bg-white focus:border-blue-600 text-slate-800 text-xs transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Handle (@username)</label>
+                    <label className="font-semibold text-slate-700 block mb-1.5">
+                      Handle (@username)
+                    </label>
                     <input
                       type="text"
                       placeholder="e.g. @john_doe"
                       value={editHandle}
                       onChange={(e) => setEditHandle(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-blue-500"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 outline-none focus:bg-white focus:border-blue-600 text-slate-800 text-xs transition-all"
                     />
                   </div>
 
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Bio Description</label>
+                    <label className="font-semibold text-slate-700 block mb-1.5">
+                      Bio Description
+                    </label>
                     <textarea
                       value={editBio}
                       onChange={(e) => setEditBio(e.target.value)}
                       rows={3}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder="Tell the community about yourself..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 outline-none focus:bg-white focus:border-blue-600 text-slate-800 text-xs transition-all resize-none"
                     />
                   </div>
 
+                  {/* Avatar Upload */}
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Avatar Image</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setEditAvatar(e.target.files[0])}
-                      className="w-full text-xs text-slate-500"
-                    />
+                    <label className="font-semibold text-slate-700 block mb-1.5">
+                      Avatar Image
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="avatar-upload-input"
+                        onChange={(e) => setEditAvatar(e.target.files[0])}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="avatar-upload-input"
+                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-colors border border-slate-200"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Choose Avatar</span>
+                      </label>
+                      <span className="text-xs text-slate-500 truncate max-w-[160px]">
+                        {editAvatar ? editAvatar.name : "No file chosen"}
+                      </span>
+                    </div>
                   </div>
 
+                  {/* Cover Upload */}
                   <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Cover Image</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setEditCover(e.target.files[0])}
-                      className="w-full text-xs text-slate-500"
-                    />
+                    <label className="font-semibold text-slate-700 block mb-1.5">
+                      Cover Image
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        id="cover-upload-input"
+                        onChange={(e) => setEditCover(e.target.files[0])}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="cover-upload-input"
+                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs flex items-center gap-2 cursor-pointer transition-colors border border-slate-200"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Choose Cover</span>
+                      </label>
+                      <span className="text-xs text-slate-500 truncate max-w-[160px]">
+                        {editCover ? editCover.name : "No file chosen"}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
                     <button
                       type="button"
                       onClick={() => setShowEditModal(false)}
-                      className="px-4 py-2 bg-slate-100 text-slate-700 font-semibold rounded-xl hover:bg-slate-200"
+                      className="px-4 py-2.5 bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={savingProfile}
-                      className="px-5 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+                      className="px-5 py-2.5 bg-blue-600 text-white font-semibold text-xs rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
                     >
-                      {savingProfile && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {savingProfile && (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      )}
                       <span>Save Profile</span>
                     </button>
                   </div>

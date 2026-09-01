@@ -243,6 +243,8 @@ export const commentPost = async (req, res, next) => {
     post.comments.push({
       user: req.user,
       text,
+      likes: [],
+      replies: [],
       createdAt: new Date(),
     });
 
@@ -253,10 +255,89 @@ export const commentPost = async (req, res, next) => {
       .populate("likes", "username avatar")
       .populate("taggedFriends", "username avatar")
       .populate("group", "name coverImage")
-      .populate("comments.user", "username avatar");
+      .populate("comments.user", "username avatar")
+      .populate("comments.replies.user", "username avatar");
 
     res.json(updatedPost);
   } catch (err) {
     next(err);
   }
 };
+
+// Toggle like on a comment
+export const likeComment = async (req, res, next) => {
+  try {
+    const { id: postId, commentId } = req.params;
+    const userId = new mongoose.Types.ObjectId(req.user);
+
+    const post = await Post.findById(postId);
+    if (!post) throw new ApiError(404, "Post not found");
+
+    const comment = post.comments.id(commentId);
+    if (!comment) throw new ApiError(404, "Comment not found");
+
+    const alreadyLiked = comment.likes.some(
+      (lid) => lid.toString() === userId.toString()
+    );
+
+    if (alreadyLiked) {
+      comment.likes = comment.likes.filter(
+        (lid) => lid.toString() !== userId.toString()
+      );
+    } else {
+      comment.likes.push(userId);
+    }
+
+    await post.save();
+
+    const updatedPost = await Post.findById(postId)
+      .populate("user", "username avatar")
+      .populate("likes", "username avatar")
+      .populate("taggedFriends", "username avatar")
+      .populate("group", "name coverImage")
+      .populate("comments.user", "username avatar")
+      .populate("comments.replies.user", "username avatar");
+
+    res.json(updatedPost);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Add a reply to a comment
+export const replyComment = async (req, res, next) => {
+  try {
+    const { id: postId, commentId } = req.params;
+    const { text } = req.body;
+
+    if (!text?.trim()) throw new ApiError(400, "Reply text is required");
+
+    const post = await Post.findById(postId);
+    if (!post) throw new ApiError(404, "Post not found");
+
+    const comment = post.comments.id(commentId);
+    if (!comment) throw new ApiError(404, "Comment not found");
+
+    comment.replies.push({
+      user: req.user,
+      text,
+      likes: [],
+      createdAt: new Date(),
+    });
+
+    await post.save();
+
+    const updatedPost = await Post.findById(postId)
+      .populate("user", "username avatar")
+      .populate("likes", "username avatar")
+      .populate("taggedFriends", "username avatar")
+      .populate("group", "name coverImage")
+      .populate("comments.user", "username avatar")
+      .populate("comments.replies.user", "username avatar");
+
+    res.json(updatedPost);
+  } catch (err) {
+    next(err);
+  }
+};
+
