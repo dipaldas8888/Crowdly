@@ -422,9 +422,9 @@ export default function MessagesPage() {
       <div className="max-w-[1600px] w-full mx-auto flex flex-1 h-[calc(100vh-3.5rem)] overflow-hidden">
         <LeftSidebar />
 
-        <main className="flex-1 flex overflow-hidden bg-white border-x border-slate-200/80">
+        <main className="flex-1 flex overflow-hidden bg-white border-x border-slate-200/80 pb-14 md:pb-0">
           {/* ── Left list panel: Conversations ── */}
-          <div className="w-80 md:w-96 border-r border-slate-200/80 flex flex-col shrink-0 bg-white">
+          <div className={`${activePartner ? 'hidden sm:flex' : 'flex'} w-full sm:w-80 md:w-96 border-r border-slate-200/80 flex-col shrink-0 bg-white`}>
             {/* Header & Search */}
             <div className="p-4 border-b border-slate-100 space-y-3">
               <div className="flex items-center justify-between">
@@ -520,12 +520,20 @@ export default function MessagesPage() {
           </div>
 
           {/* ── Chat area ── */}
-          <div className="flex-1 flex flex-col h-full bg-slate-50/40 relative">
+          <div className={`${activePartner ? 'flex' : 'hidden sm:flex'} flex-1 flex-col h-full bg-slate-50/40 relative`}>
             {activePartner ? (
               <>
                 {/* Chat header */}
-                <div className="px-5 py-3 border-b border-slate-200/80 bg-white flex items-center justify-between shrink-0 shadow-xs relative">
-                  <div className="flex items-center gap-3">
+                <div className="px-3 sm:px-5 py-3 border-b border-slate-200/80 bg-white flex items-center justify-between shrink-0 shadow-xs relative">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Mobile back button */}
+                    <button
+                      onClick={() => setActivePartner(null)}
+                      className="sm:hidden p-1.5 rounded-xl hover:bg-slate-100 text-slate-500 cursor-pointer mr-1"
+                      title="Back"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                    </button>
                     <div className="relative">
                       <img
                         src={

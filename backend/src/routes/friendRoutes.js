@@ -14,9 +14,10 @@ import { protect } from "../middleware/authMiddleware.js";
 const router = express.Router();
 
 router.get("/search", protect, searchUsers);
-router.get("/", protect, getFriends);
 router.get("/requests", protect, getFriendRequests);
 router.get("/suggested", protect, getSuggestedFriends);
+router.get("/user/:userId", protect, getFriends);
+router.get("/", protect, getFriends);
 router.post("/request/:id", protect, sendFriendRequest);
 router.put("/accept/:id", protect, acceptFriendRequest);
 router.put("/reject/:id", protect, rejectFriendRequest);

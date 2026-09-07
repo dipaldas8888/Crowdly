@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
@@ -19,6 +20,8 @@ import {
   ChevronDown,
   ChevronUp,
   Check,
+  Repeat,
+  Loader2,
 } from "lucide-react";
 
 const DEFAULT_AVATAR =
@@ -205,7 +208,7 @@ function CommentRow({ comment, postId, postOwnerId, user, setPosts, depth = 0 })
               </p>
             </div>
 
-            {/* ── Edit & Delete options directly ON THE COMMENT CARD (visible on hover) ── */}
+            {/* ── Edit & Delete options directly ON THE COMMENT CARD ── */}
             {(canEditComment || canDeleteComment) && (
               <div className="relative shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity">
                 <button
@@ -247,7 +250,7 @@ function CommentRow({ comment, postId, postOwnerId, user, setPosts, depth = 0 })
           </div>
         )}
 
-        {/* Actions row (Time, Like, Reply ONLY - edit/delete are strictly on the card) */}
+        {/* Actions row */}
         <div className="flex items-center gap-3 mt-1 ml-1 flex-wrap">
           <span className="text-[10px] text-slate-400 font-medium">
             {formatTime(comment.createdAt)}
@@ -382,6 +385,12 @@ export default function PostCard({ post, setPosts }) {
   const [editLocation, setEditLocation] = useState(post.location || "");
   const [editImage, setEditImage] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
+
+  // Share / Repost Modal state
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareCaption, setShareCaption] = useState("");
+  const [sharingPost, setSharingPost] = useState(false);
+
   const [copiedShare, setCopiedShare] = useState(false);
   const [sendingComment, setSendingComment] = useState(false);
 
@@ -487,26 +496,46 @@ export default function PostCard({ post, setPosts }) {
     }
   };
 
-  const handleShare = async () => {
+  // Trigger Share / Repost Modal
+  const handleOpenShareModal = () => {
+    setShareCaption("");
+    setShowShareModal(true);
+  };
+
+  // Submit Share / Repost with user caption
+  const handleSubmitShare = async (e) => {
+    e.preventDefault();
+    if (sharingPost) return;
     try {
-      await apiRequest(`/posts/share/${post._id}`, { method: "POST" });
-      setPosts((prev) =>
-        prev.map((p) =>
+      setSharingPost(true);
+      const newSharedPost = await apiRequest(`/posts/share/${post._id}`, {
+        method: "POST",
+        body: { text: shareCaption },
+      });
+
+      // Increment sharesCount on original post in state
+      setPosts((prev) => [
+        newSharedPost,
+        ...prev.map((p) =>
           p._id === post._id
             ? { ...p, sharesCount: (p.sharesCount || 0) + 1 }
             : p
-        )
-      );
-      navigator.clipboard?.writeText(window.location.href);
-      setCopiedShare(true);
-      toast.success("Post link copied to clipboard!");
-      setTimeout(() => setCopiedShare(false), 2000);
+        ),
+      ]);
+
+      setShowShareModal(false);
+      setShareCaption("");
+      toast.success("Post shared to your feed!");
     } catch (err) {
-      console.error(err);
+      console.error("Share error:", err);
+      toast.error(err.message || "Failed to share post");
+    } finally {
+      setSharingPost(false);
     }
   };
 
   const commentCount = post.comments?.length || 0;
+  const targetOriginal = post.originalPost;
 
   return (
     <div
@@ -533,6 +562,11 @@ export default function PostCard({ post, setPosts }) {
               >
                 {post.user?.username || "Crowdly User"}
               </Link>
+              {targetOriginal && (
+                <span className="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+                  <Repeat className="w-3.5 h-3.5 text-blue-500" /> shared a post
+                </span>
+              )}
               {post.location && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-rose-500 font-medium bg-rose-50 px-2 py-0.5 rounded-full">
                   <MapPin className="w-3 h-3" />
@@ -579,10 +613,10 @@ export default function PostCard({ post, setPosts }) {
                 </>
               ) : (
                 <button
-                  onClick={handleShare}
+                  onClick={handleOpenShareModal}
                   className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
                 >
-                  <Share2 className="w-4 h-4 text-slate-500" /> Share Link
+                  <Repeat className="w-4 h-4 text-blue-500" /> Share Post
                 </button>
               )}
             </div>
@@ -590,7 +624,7 @@ export default function PostCard({ post, setPosts }) {
         </div>
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Content (Direct or Shared) ── */}
       {isEditing ? (
         <div className="px-5 pb-4 space-y-3">
           <textarea
@@ -643,17 +677,78 @@ export default function PostCard({ post, setPosts }) {
         </div>
       ) : (
         <>
+          {/* User's caption / post text */}
           {post.text && (
             <p className="px-5 text-sm text-slate-800 leading-relaxed mb-3">
               {post.text}
             </p>
           )}
-          {post.image && (
-            <div className="max-h-[480px] overflow-hidden bg-slate-100">
+
+          {/* Embedded Original Post if this is a shared post */}
+          {targetOriginal && (
+            <div className="mx-5 mb-3 p-3.5 bg-slate-50/90 border border-slate-200/90 rounded-2xl space-y-2.5">
+              <div className="flex items-center gap-2.5">
+                <img
+                  src={targetOriginal.user?.avatar || DEFAULT_AVATAR}
+                  alt={targetOriginal.user?.username}
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200"
+                />
+                <div>
+                  <span className="text-xs font-bold text-slate-900 block leading-tight">
+                    {targetOriginal.user?.username || "Crowdly User"}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {formatTime(targetOriginal.createdAt)}
+                  </span>
+                </div>
+              </div>
+
+              {targetOriginal.text && (
+                <p className="text-xs text-slate-700 leading-relaxed">
+                  {targetOriginal.text}
+                </p>
+              )}
+
+              {targetOriginal.image && (
+                <div className="w-full max-h-[550px] rounded-xl overflow-hidden bg-slate-950/5 flex items-center justify-center">
+                  <img
+                    src={targetOriginal.image}
+                    alt="Original media"
+                    className="w-full h-auto max-h-[550px] object-contain mx-auto"
+                  />
+                </div>
+              )}
+
+              {targetOriginal.video && (
+                <div className="w-full max-h-[550px] rounded-xl overflow-hidden bg-black flex items-center justify-center">
+                  <video
+                    src={targetOriginal.video}
+                    controls
+                    className="w-full h-auto max-h-[550px] object-contain mx-auto"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Direct Post Image */}
+          {!targetOriginal && post.image && (
+            <div className="w-full max-h-[750px] bg-slate-950/5 flex items-center justify-center overflow-hidden">
               <img
                 src={post.image}
                 alt="post"
-                className="w-full h-full object-cover"
+                className="w-full h-auto max-h-[750px] object-contain mx-auto block"
+              />
+            </div>
+          )}
+
+          {/* Direct Post Video */}
+          {!targetOriginal && post.video && (
+            <div className="w-full max-h-[750px] bg-black flex items-center justify-center overflow-hidden">
+              <video
+                src={post.video}
+                controls
+                className="w-full h-auto max-h-[750px] object-contain mx-auto block"
               />
             </div>
           )}
@@ -682,8 +777,8 @@ export default function PostCard({ post, setPosts }) {
               {commentCount} {commentCount === 1 ? "comment" : "comments"}
             </button>
           )}
-          {post.sharesCount > 0 && (
-            <span>{post.sharesCount} shares</span>
+          {(post.sharesCount > 0 || targetOriginal) && (
+            <span>{post.sharesCount || 1} shares</span>
           )}
         </div>
       </div>
@@ -719,11 +814,11 @@ export default function PostCard({ post, setPosts }) {
         </button>
 
         <button
-          onClick={handleShare}
+          onClick={handleOpenShareModal}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
         >
           <Share2 className="w-4 h-4 text-slate-500" />
-          <span>{copiedShare ? "Copied!" : "Share"}</span>
+          <span>Share</span>
         </button>
       </div>
 
@@ -779,6 +874,100 @@ export default function PostCard({ post, setPosts }) {
           </div>
         </div>
       )}
+
+      {/* ── Share / Repost Modal (rendered via createPortal directly on document.body) ── */}
+      {showShareModal &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-lg w-full shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 text-slate-900 font-bold text-base">
+                  <Repeat className="w-5 h-5 text-blue-600" />
+                  <span>Share Post to Feed</span>
+                </div>
+                <button
+                  onClick={() => setShowShareModal(false)}
+                  className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitShare} className="space-y-4">
+                {/* Author badge */}
+                <div className="flex items-center gap-3">
+                  <img
+                    src={user?.avatar || DEFAULT_AVATAR}
+                    alt={user?.username}
+                    className="w-10 h-10 rounded-full object-cover border border-slate-200"
+                  />
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">
+                      {user?.username}
+                    </h4>
+                    <span className="text-[10px] text-slate-400">
+                      Sharing to your public feed
+                    </span>
+                  </div>
+                </div>
+
+                {/* Caption input ("What's on your mind?") */}
+                <textarea
+                  placeholder={`What's on your mind, ${user?.username || "friend"}?`}
+                  value={shareCaption}
+                  onChange={(e) => setShareCaption(e.target.value)}
+                  rows={3}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs text-slate-800 outline-none focus:bg-white focus:border-blue-600 transition-all resize-none placeholder-slate-400"
+                  autoFocus
+                />
+
+                {/* Preview of Original Post being shared */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2 max-h-48 overflow-y-auto">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={
+                        (targetOriginal ? targetOriginal.user?.avatar : post.user?.avatar) ||
+                        DEFAULT_AVATAR
+                      }
+                      alt="Original author"
+                      className="w-7 h-7 rounded-full object-cover border border-slate-200"
+                    />
+                    <span className="text-xs font-bold text-slate-800">
+                      {(targetOriginal ? targetOriginal.user?.username : post.user?.username) ||
+                        "Crowdly User"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 line-clamp-2">
+                    {(targetOriginal ? targetOriginal.text : post.text) || "Shared media post"}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setShowShareModal(false)}
+                    className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-200 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={sharingPost}
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {sharingPost ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    <span>Share Now</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

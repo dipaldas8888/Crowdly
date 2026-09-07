@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import { ApiError } from "../utils/apiError.js";
+import { createAndSendNotification } from "../utils/notificationHelper.js";
 
 export const searchUsers = async (req, res, next) => {
   try {
@@ -53,6 +54,12 @@ export const sendFriendRequest = async (req, res, next) => {
     await currentUser.save();
     await targetUser.save();
 
+    await createAndSendNotification({
+      recipient: targetUserId,
+      sender: currentUserId,
+      type: "friend_request",
+    });
+
     res.json({ message: "Friend request sent successfully" });
   } catch (err) {
     next(err);
@@ -93,6 +100,12 @@ export const acceptFriendRequest = async (req, res, next) => {
 
     await currentUser.save();
     await requesterUser.save();
+
+    await createAndSendNotification({
+      recipient: requesterId,
+      sender: currentUserId,
+      type: "friend_accept",
+    });
 
     res.json({ message: "Friend request accepted" });
   } catch (err) {
@@ -158,9 +171,10 @@ export const removeFriend = async (req, res, next) => {
 
 export const getFriends = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user).populate(
+    const targetUserId = req.params.userId || req.query.userId || req.user;
+    const user = await User.findById(targetUserId).populate(
       "friends",
-      "username email avatar isOnline lastActive",
+      "username handle email avatar bio isOnline lastActive",
     );
 
     res.json(user ? user.friends : []);

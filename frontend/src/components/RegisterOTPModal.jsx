@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -59,24 +60,21 @@ export default function RegisterOTPModal({
 
   const handleResend = async () => {
     try {
-      setLoading(true);
       setError("");
       await apiRequest("/auth/send-otp", {
         method: "POST",
         body: { email: registerData.email },
       });
-      toast.info("A new OTP code has been sent to your email.");
+      toast.success("New OTP sent to your email!");
       setResendTimer(60);
     } catch (err) {
       setError(err.message);
       toast.error(err.message || "Failed to resend OTP");
-    } finally {
-      setLoading(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5 relative">
         <button
           onClick={onClose}
@@ -144,6 +142,7 @@ export default function RegisterOTPModal({
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

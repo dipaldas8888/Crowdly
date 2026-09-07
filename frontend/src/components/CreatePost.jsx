@@ -107,11 +107,11 @@ export default function CreatePost({ setPosts, groupId }) {
 
       {/* Image Preview */}
       {image && (
-        <div className="relative mt-3.5 rounded-xl overflow-hidden max-h-64 border border-slate-200">
+        <div className="relative mt-3.5 rounded-xl overflow-hidden max-h-80 bg-slate-950/5 flex items-center justify-center border border-slate-200">
           <img
             src={URL.createObjectURL(image)}
             alt="preview"
-            className="w-full h-full object-cover"
+            className="w-full h-auto max-h-80 object-contain mx-auto"
           />
           <button
             onClick={() => setImage(null)}

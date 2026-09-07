@@ -14,6 +14,7 @@ import GroupDetailPage from "./pages/GroupDetailPage";
 import ProfilePage from "./pages/ProfilePage";
 import MessagesPage from "./pages/MessagesPage";
 import WatchPage from "./pages/WatchPage";
+import SettingsPage from "./pages/SettingsPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { apiRequest } from "./lib/api";
 import "./App.css";
@@ -48,6 +49,7 @@ const requireAuth = async () => {
 };
 
 import { SocketProvider } from "./context/SocketContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -57,16 +59,18 @@ function AppShell() {
       <CssBaseline />
       <AuthProvider>
         <SocketProvider>
-          <Outlet />
-          <ToastContainer
-            position="top-right"
-            autoClose={3000}
-            hideProgressBar={false}
-            newestOnTop
-            closeOnClick
-            pauseOnHover
-            theme="light"
-          />
+          <NotificationProvider>
+            <Outlet />
+            <ToastContainer
+              position="top-right"
+              autoClose={3000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnHover
+              theme="light"
+            />
+          </NotificationProvider>
         </SocketProvider>
       </AuthProvider>
     </ThemeProvider>
@@ -138,6 +142,10 @@ export const router = createBrowserRouter([
           {
             path: "watch",
             element: <WatchPage />,
+          },
+          {
+            path: "settings",
+            element: <SettingsPage />,
           },
         ],
       },

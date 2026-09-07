@@ -63,7 +63,7 @@ export default function HomePage() {
         <LeftSidebar />
 
         {/* Center Main Content Feed */}
-        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-6 px-4 md:px-8 w-full">
+        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-8 w-full pb-16 md:pb-6">
           {/* Top Stories Row */}
           <Stories />
 

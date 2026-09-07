@@ -70,6 +70,65 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    phone: {
+      type: String,
+      default: "",
+    },
+    dateOfBirth: {
+      type: Date,
+      default: null,
+    },
+    gender: {
+      type: String,
+      default: "",
+    },
+    language: {
+      type: String,
+      default: "English",
+    },
+    country: {
+      type: String,
+      default: "",
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isDeactivated: {
+      type: Boolean,
+      default: false,
+    },
+    isPrivate: {
+      type: Boolean,
+      default: false,
+    },
+    privacySettings: {
+      whoCanFollow: {
+        type: String,
+        enum: ["Everyone", "People you approve"],
+        default: "Everyone",
+      },
+      whoCanMessage: {
+        type: String,
+        enum: ["Everyone", "Followers", "Nobody"],
+        default: "Everyone",
+      },
+      whoCanComment: {
+        type: String,
+        enum: ["Everyone", "Followers", "Nobody"],
+        default: "Everyone",
+      },
+      whoCanMention: {
+        type: String,
+        enum: ["Everyone", "Followers", "Nobody"],
+        default: "Everyone",
+      },
+      whoCanTag: {
+        type: String,
+        enum: ["Everyone", "Followers", "Nobody"],
+        default: "Everyone",
+      },
+    },
   },
   { timestamps: true },
 );

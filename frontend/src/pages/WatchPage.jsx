@@ -163,6 +163,20 @@ export default function WatchPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  /**
+   * Converts a Cloudinary VIDEO url to a JPEG thumbnail url.
+   * Works by replacing /video/upload/ with /video/upload/so_0,f_jpg/
+   * and swapping the extension to .jpg
+   * Falls back to null if not a Cloudinary URL (browser will skip the poster).
+   */
+  const getVideoThumbnail = (videoUrl) => {
+    if (!videoUrl || !videoUrl.includes("cloudinary.com")) return null;
+    // Insert transformation: snapshot at 0s, format jpg
+    return videoUrl
+      .replace("/video/upload/", "/video/upload/so_0,f_jpg/")
+      .replace(/\.(mp4|mov|webm|avi|mkv)(\?.*)?$/, ".jpg");
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 font-sans text-slate-800 antialiased flex flex-col">
       <Navbar />
@@ -171,7 +185,7 @@ export default function WatchPage() {
         <LeftSidebar />
 
         {/* Center Content: Watch Platform */}
-        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-6 px-4 md:px-8 w-full space-y-6 pb-12">
+        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-8 w-full space-y-4 sm:space-y-6 pb-16 md:pb-12">
           {/* Header Action Bar */}
           <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
@@ -252,8 +266,9 @@ export default function WatchPage() {
                     <video
                       src={vid.videoUrl}
                       controls
-                      poster={vid.thumbnailUrl}
+                      poster={getVideoThumbnail(vid.videoUrl) || vid.thumbnailUrl || undefined}
                       className="w-full h-full object-contain"
+                      preload="metadata"
                     />
                   </div>
 

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Post from "../models/Post.js";
 import { ApiError } from "../utils/apiError.js";
 import cloudinary from "../config/cloudinary.js";
+import { createAndSendNotification } from "../utils/notificationHelper.js";
 
 const uploadToCloudinary = (fileBuffer) =>
   new Promise((resolve, reject) => {
@@ -83,6 +84,13 @@ export const getFeed = async (req, res, next) => {
       .populate("likes", "username avatar")
       .populate("taggedFriends", "username avatar")
       .populate("group", "name coverImage")
+      .populate({
+        path: "originalPost",
+        populate: [
+          { path: "user", select: "username avatar" },
+          { path: "taggedFriends", select: "username avatar" },
+        ],
+      })
       .populate("comments.user", "username avatar")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -174,16 +182,51 @@ export const deletePost = async (req, res, next) => {
 export const sharePost = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const post = await Post.findById(id);
+    const { text } = req.body;
+    const currentUserId = req.user;
 
-    if (!post) {
+    const targetPost = await Post.findById(id);
+    if (!targetPost) {
       throw new ApiError(404, "Post not found");
     }
 
-    post.sharesCount = (post.sharesCount || 0) + 1;
-    await post.save();
+    targetPost.sharesCount = (targetPost.sharesCount || 0) + 1;
+    await targetPost.save();
 
-    res.json({ message: "Post shared", sharesCount: post.sharesCount });
+    const rootOriginalPostId = targetPost.originalPost || targetPost._id;
+
+    const sharedPost = await Post.create({
+      user: currentUserId,
+      text: text?.trim() || "",
+      originalPost: rootOriginalPostId,
+    });
+
+    // Notify author of original target post
+    if (targetPost.user) {
+      await createAndSendNotification({
+        recipient: targetPost.user,
+        sender: currentUserId,
+        type: "share",
+        post: targetPost._id,
+      });
+    }
+
+    const populatedPost = await Post.findById(sharedPost._id)
+      .populate("user", "username avatar")
+      .populate("likes", "username avatar")
+      .populate("taggedFriends", "username avatar")
+      .populate("group", "name coverImage")
+      .populate({
+        path: "originalPost",
+        populate: [
+          { path: "user", select: "username avatar" },
+          { path: "taggedFriends", select: "username avatar" },
+        ],
+      })
+      .populate("comments.user", "username avatar")
+      .populate("comments.replies.user", "username avatar");
+
+    res.status(201).json(populatedPost);
   } catch (err) {
     next(err);
   }
@@ -209,6 +252,15 @@ export const likePost = async (req, res, next) => {
       );
     } else {
       post.likes.push(userId);
+      // Notify post owner
+      if (post.user) {
+        await createAndSendNotification({
+          recipient: post.user,
+          sender: req.user,
+          type: "like",
+          post: post._id,
+        });
+      }
     }
 
     await post.save();
@@ -249,6 +301,16 @@ export const commentPost = async (req, res, next) => {
     });
 
     await post.save();
+
+    // Notify post owner
+    if (post.user) {
+      await createAndSendNotification({
+        recipient: post.user,
+        sender: req.user,
+        type: "comment",
+        post: post._id,
+      });
+    }
 
     const updatedPost = await Post.findById(post._id)
       .populate("user", "username avatar")

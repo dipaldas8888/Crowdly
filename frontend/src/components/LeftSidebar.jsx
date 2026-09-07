@@ -3,17 +3,14 @@ import { Link, useLocation } from "react-router-dom";
 import {
   Home,
   Users,
-  Store,
   Tv,
   Clock,
-  Calendar,
-  Gamepad2,
-  Image,
-  Video,
+  Store,
   MessageSquare,
-  HeartHandshake,
-  BookOpen,
-  GraduationCap,
+  Settings,
+  Layers,
+  Bookmark,
+  Calendar,
 } from "lucide-react";
 
 export default function LeftSidebar() {
@@ -21,158 +18,99 @@ export default function LeftSidebar() {
   const location = useLocation();
 
   const mainItems = [
-    {
-      icon: Home,
-      label: "Feed",
-      path: "/home",
-      color: "text-blue-600 bg-blue-50",
-    },
-    {
-      icon: Users,
-      label: "Friends",
-      path: "/friends",
-      color: "text-indigo-600 bg-indigo-50",
-    },
-    {
-      icon: Users,
-      label: "Groups",
-      path: "/groups",
-      color: "text-emerald-600 bg-emerald-50",
-    },
-    {
-      icon: Store,
-      label: "Marketplace",
-      path: "#",
-      color: "text-sky-500 bg-sky-50",
-    },
-    {
-      icon: Tv,
-      label: "Watch",
-      path: "/watch",
-      color: "text-purple-500 bg-purple-50",
-    },
-    {
-      icon: Clock,
-      label: "Memories",
-      path: "#",
-      color: "text-amber-500 bg-amber-50",
-    },
+    { icon: Home, label: "Feed", path: "/home", color: "text-blue-600 bg-blue-50" },
+    { icon: Users, label: "Friends", path: "/friends", color: "text-indigo-600 bg-indigo-50" },
+    { icon: Layers, label: "Groups", path: "/groups", color: "text-emerald-600 bg-emerald-50" },
+    { icon: Tv, label: "Watch", path: "/watch", color: "text-purple-600 bg-purple-50" },
+    { icon: MessageSquare, label: "Messages", path: "/messages", color: "text-sky-600 bg-sky-50" },
   ];
 
-  const shortcuts = [
-    {
-      icon: Calendar,
-      label: "Events",
-      color: "text-rose-500 bg-rose-50",
-    },
-    {
-      icon: Gamepad2,
-      label: "Gaming",
-      color: "text-emerald-500 bg-emerald-50",
-    },
-    {
-      icon: Image,
-      label: "Gallery",
-      color: "text-violet-500 bg-violet-50",
-    },
-    {
-      icon: Video,
-      label: "Videos",
-      color: "text-pink-500 bg-pink-50",
-    },
-    {
-      icon: MessageSquare,
-      label: "Messages",
-      path: "/messages",
-      color: "text-teal-500 bg-teal-50",
-    },
-  ];
-
-  const others = [
-    {
-      icon: HeartHandshake,
-      label: "Fundraiser",
-      color: "text-orange-500 bg-orange-50",
-    },
-    {
-      icon: BookOpen,
-      label: "Tutorials",
-      color: "text-blue-600 bg-blue-50",
-    },
-    {
-      icon: GraduationCap,
-      label: "Courses",
-      color: "text-indigo-600 bg-indigo-50",
-    },
+  const secondaryItems = [
+    { icon: Bookmark, label: "Saved", path: "#", color: "text-amber-600 bg-amber-50" },
+    { icon: Clock, label: "Memories", path: "#", color: "text-rose-500 bg-rose-50" },
+    { icon: Calendar, label: "Events", path: "#", color: "text-teal-600 bg-teal-50" },
+    { icon: Store, label: "Marketplace", path: "#", color: "text-orange-500 bg-orange-50" },
+    { icon: Settings, label: "Settings", path: "/settings", color: "text-slate-600 bg-slate-100" },
   ];
 
   return (
-    <aside className="w-60 xl:w-64 shrink-0 hidden md:block bg-white border-r border-slate-200/80 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-3.5 scrollbar-thin">
-      <div className="space-y-4">
+    <aside className="w-60 xl:w-64 shrink-0 hidden md:flex flex-col bg-white border-r border-slate-200/80 sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto p-3 scrollbar-thin">
+      <div className="space-y-1">
         {/* User Profile Header */}
         <Link
           to="/profile"
-          className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors"
+          className="flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors mb-2 group"
         >
-          <img
-            src={
-              user?.avatar ||
-              `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80`
-            }
-            alt={user?.username || "User"}
-            className="w-9 h-9 rounded-full object-cover border border-slate-200 shadow-xs"
-          />
-          <span className="font-semibold text-slate-800 text-sm truncate">
-            {user?.username || "John Doe"}
-          </span>
+          <div className="relative shrink-0">
+            <img
+              src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"}
+              alt={user?.username || "User"}
+              className="w-9 h-9 rounded-full object-cover border-2 border-slate-200 group-hover:border-blue-300 transition-colors"
+            />
+          </div>
+          <div className="min-w-0">
+            <span className="font-bold text-slate-800 text-sm truncate block group-hover:text-blue-600 transition-colors">
+              {user?.username || "My Profile"}
+            </span>
+            <span className="text-[11px] text-slate-400 font-medium truncate block">
+              {user?.handle || "View profile"}
+            </span>
+          </div>
         </Link>
 
-        {/* Main Navigation Links */}
+        {/* Divider */}
+        <div className="h-px bg-slate-100 mb-2" />
+
+        {/* Main Nav */}
         <nav className="space-y-0.5">
-          {mainItems.map((item, idx) => {
+          {mainItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const active = location.pathname === item.path;
             return (
               <Link
-                key={idx}
+                key={item.path}
                 to={item.path}
                 className={`flex items-center gap-3 px-2.5 py-2 rounded-xl cursor-pointer transition-all group ${
-                  isActive
-                    ? "bg-blue-50/80 text-blue-600 font-semibold"
-                    : "hover:bg-slate-100 text-slate-700 font-medium"
+                  active
+                    ? "bg-blue-50 text-blue-600"
+                    : "hover:bg-slate-50 text-slate-700"
                 }`}
               >
-                <div
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.color} group-hover:scale-105 transition-transform`}
-                >
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${active ? "bg-blue-100 text-blue-600" : item.color}`}>
                   <Icon className="w-4 h-4" />
                 </div>
-                <span className="text-xs sm:text-sm">{item.label}</span>
+                <span className={`text-sm font-semibold ${active ? "text-blue-700" : "text-slate-700"}`}>
+                  {item.label}
+                </span>
+                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-600" />}
               </Link>
             );
           })}
         </nav>
 
-        {/* Divider & Your Shortcuts */}
-        <div className="pt-2 border-t border-slate-100">
-          <p className="px-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-            Your shortcuts
+        {/* Divider + Explore Section */}
+        <div className="pt-3">
+          <p className="px-2.5 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">
+            Explore
           </p>
           <nav className="space-y-0.5">
-            {shortcuts.map((item, idx) => {
+            {secondaryItems.map((item) => {
               const Icon = item.icon;
+              const active = location.pathname === item.path && item.path !== "#";
               return (
                 <Link
-                  key={idx}
-                  to={item.path || "#"}
-                  className="flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors group text-slate-700 font-medium"
+                  key={item.label}
+                  to={item.path}
+                  className={`flex items-center gap-3 px-2.5 py-2 rounded-xl cursor-pointer transition-all group ${
+                    active
+                      ? "bg-blue-50 text-blue-600"
+                      : "hover:bg-slate-50 text-slate-600"
+                  }`}
                 >
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.color} group-hover:scale-105 transition-transform`}
-                  >
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${active ? "bg-blue-100 text-blue-600" : item.color}`}>
                     <Icon className="w-4 h-4" />
                   </div>
-                  <span className="text-xs sm:text-sm group-hover:text-slate-900">
+                  <span className="text-sm font-semibold text-slate-600 group-hover:text-slate-900 transition-colors">
                     {item.label}
                   </span>
                 </Link>
@@ -180,34 +118,13 @@ export default function LeftSidebar() {
             })}
           </nav>
         </div>
+      </div>
 
-        {/* Divider & Others */}
-        <div className="pt-2 border-t border-slate-100">
-          <p className="px-2.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-            Others
-          </p>
-          <nav className="space-y-0.5">
-            {others.map((item, idx) => {
-              const Icon = item.icon;
-              return (
-                <a
-                  key={idx}
-                  href="#"
-                  className="flex items-center gap-3 px-2.5 py-2 rounded-xl hover:bg-slate-100 cursor-pointer transition-colors group text-slate-700 font-medium"
-                >
-                  <div
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center ${item.color} group-hover:scale-105 transition-transform`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs sm:text-sm group-hover:text-slate-900">
-                    {item.label}
-                  </span>
-                </a>
-              );
-            })}
-          </nav>
-        </div>
+      {/* Footer */}
+      <div className="mt-auto pt-4 pb-1 px-2.5">
+        <p className="text-[10px] text-slate-300 font-medium">
+          © 2026 Crowdly · All rights reserved
+        </p>
       </div>
     </aside>
   );

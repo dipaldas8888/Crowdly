@@ -126,7 +126,7 @@ export default function FriendsPage() {
       <div className="flex flex-1 w-full max-w-[1600px] mx-auto justify-between items-start">
         <LeftSidebar />
 
-        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-6 px-4 md:px-8 w-full space-y-6 pb-12">
+        <main className="flex-1 min-w-0 max-w-3xl xl:max-w-4xl mx-auto py-4 sm:py-6 px-3 sm:px-4 md:px-8 w-full space-y-4 sm:space-y-6 pb-16 md:pb-12">
           {/* Header Banner */}
           <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -142,53 +142,41 @@ export default function FriendsPage() {
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
-            <button
-              onClick={() => setActiveTab("friends")}
-              className={`px-4 py-2.5 text-sm font-semibold rounded-xl transition-all cursor-pointer ${
-                activeTab === "friends"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
-              }`}
-            >
-              My Friends ({friends.length})
-            </button>
-            <button
-              onClick={() => setActiveTab("requests")}
-              className={`px-4 py-2.5 text-sm font-semibold rounded-xl transition-all cursor-pointer relative ${
-                activeTab === "requests"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
-              }`}
-            >
-              Requests ({requests.length})
-              {requests.length > 0 && (
-                <span className="ml-1.5 bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
-                  {requests.length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab("suggested")}
-              className={`px-4 py-2.5 text-sm font-semibold rounded-xl transition-all cursor-pointer ${
-                activeTab === "suggested"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
-              }`}
-            >
-              Suggested
-            </button>
-            <button
-              onClick={() => setActiveTab("search")}
-              className={`px-4 py-2.5 text-sm font-semibold rounded-xl transition-all cursor-pointer ${
-                activeTab === "search"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200"
-              }`}
-            >
-              Search Users
-            </button>
+          {/* Navigation Tabs — Pill Bar */}
+          <div className="bg-white rounded-2xl p-1.5 border border-slate-200/80 shadow-xs">
+            <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+              {[
+                { key: "friends", label: "My Friends", count: friends.length },
+                { key: "requests", label: "Requests", count: requests.length },
+                { key: "suggested", label: "Suggested", count: null },
+                { key: "search", label: "Search Users", count: null },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
+                    activeTab === tab.key
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {tab.count !== null && (
+                    <span
+                      className={`text-[11px] font-extrabold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 ${
+                        activeTab === tab.key
+                          ? tab.count > 0 && tab.key === "requests"
+                            ? "bg-rose-400 text-white"
+                            : "bg-white/25 text-white"
+                          : "bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Tab 1: My Friends */}
@@ -242,13 +230,16 @@ export default function FriendsPage() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => handleRemoveFriend(friend._id)}
-                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-                        title="Remove Friend"
-                      >
-                        <UserX className="w-5 h-5" />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleRemoveFriend(friend._id)}
+                          className="flex items-center gap-1.5 px-3 py-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer text-xs font-semibold border border-slate-200 hover:border-rose-200"
+                          title="Remove Friend"
+                        >
+                          <UserX className="w-4 h-4" />
+                          <span className="hidden sm:inline">Remove</span>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -298,17 +289,19 @@ export default function FriendsPage() {
                       <div className="flex items-center gap-2 shrink-0">
                         <button
                           onClick={() => handleAcceptRequest(user._id)}
-                          className="p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl hover:bg-blue-700 transition-colors cursor-pointer shadow-sm shadow-blue-500/20"
                           title="Accept"
                         >
-                          <Check className="w-4.5 h-4.5" />
+                          <Check className="w-4 h-4" />
+                          <span>Accept</span>
                         </button>
                         <button
                           onClick={() => handleRejectRequest(user._id)}
-                          className="p-2.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
-                          title="Reject"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer border border-slate-200 hover:border-rose-200"
+                          title="Decline"
                         >
-                          <X className="w-4.5 h-4.5" />
+                          <X className="w-4 h-4" />
+                          <span>Decline</span>
                         </button>
                       </div>
                     </div>

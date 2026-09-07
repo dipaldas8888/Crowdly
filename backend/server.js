@@ -14,6 +14,7 @@ import groupRoutes from "./src/routes/groupRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import messageRoutes from "./src/routes/messageRoutes.js";
 import watchRoutes from "./src/routes/watchRoutes.js";
+import notificationRoutes from "./src/routes/notificationRoutes.js";
 import { errorHandler } from "./src/middleware/errorMiddleware.js";
 
 dotenv.config();
@@ -98,6 +99,7 @@ app.use("/api/groups", groupRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/watch", watchRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use(errorHandler);
 

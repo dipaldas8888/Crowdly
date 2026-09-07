@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
 import { Mail, Lock, KeyRound, X, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
@@ -79,8 +80,8 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-slate-200/80 space-y-5 relative">
         <button
           onClick={onClose}
@@ -209,6 +210,7 @@ export default function ForgotPasswordModal({ isOpen, onClose }) {
           </form>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
