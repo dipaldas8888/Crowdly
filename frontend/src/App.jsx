@@ -4,30 +4,41 @@ import {
   createBrowserRouter,
   redirect,
 } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import RegisterPage from "./pages/RegisterPage";
-import LoginPage from "./pages/LoginPage";
-import HomePage from "./pages/HomePage";
-import FriendsPage from "./pages/FriendsPage";
-import GroupsPage from "./pages/GroupsPage";
-import GroupDetailPage from "./pages/GroupDetailPage";
-import ProfilePage from "./pages/ProfilePage";
-import MessagesPage from "./pages/MessagesPage";
-import WatchPage from "./pages/WatchPage";
-import SettingsPage from "./pages/SettingsPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
+import { NotificationProvider } from "./context/NotificationContext";
+import { ToastContainer } from "react-toastify";
 import { apiRequest } from "./lib/api";
+import PageLoader from "./components/PageLoader";
+import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 
+// ─────────────────────────────────────────────
+// Lazy-loaded page chunks — each page gets its
+// own JS chunk, loaded only when first visited.
+// ─────────────────────────────────────────────
+const LoginPage        = lazy(() => import("./pages/LoginPage"));
+const RegisterPage     = lazy(() => import("./pages/RegisterPage"));
+const HomePage         = lazy(() => import("./pages/HomePage"));
+const FriendsPage      = lazy(() => import("./pages/FriendsPage"));
+const GroupsPage       = lazy(() => import("./pages/GroupsPage"));
+const GroupDetailPage  = lazy(() => import("./pages/GroupDetailPage"));
+const ProfilePage      = lazy(() => import("./pages/ProfilePage"));
+const MessagesPage     = lazy(() => import("./pages/MessagesPage"));
+const WatchPage        = lazy(() => import("./pages/WatchPage"));
+const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
+
+// ─────────────────────────────────────────────
+// MUI Theme — light, branded palette
+// ─────────────────────────────────────────────
 const theme = createTheme({
   palette: {
     mode: "light",
     primary: { main: "#1f6feb" },
     secondary: { main: "#f97316" },
-    background: {
-      default: "#f4f7fb",
-      paper: "#ffffff",
-    },
+    background: { default: "#f4f7fb", paper: "#ffffff" },
   },
   shape: { borderRadius: 18 },
   typography: {
@@ -39,6 +50,9 @@ const theme = createTheme({
   },
 });
 
+// ─────────────────────────────────────────────
+// Auth loader — redirects to /login if no session
+// ─────────────────────────────────────────────
 const requireAuth = async () => {
   try {
     await apiRequest("/auth/me");
@@ -48,11 +62,16 @@ const requireAuth = async () => {
   }
 };
 
-import { SocketProvider } from "./context/SocketContext";
-import { NotificationProvider } from "./context/NotificationContext";
-import { ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+// ─────────────────────────────────────────────
+// Suspense wrapper — shows skeleton while chunks load
+// ─────────────────────────────────────────────
+function SuspensePage({ children }) {
+  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
+}
 
+// ─────────────────────────────────────────────
+// Root shell — provides global context + theme
+// ─────────────────────────────────────────────
 function AppShell() {
   return (
     <ThemeProvider theme={theme}>
@@ -69,6 +88,7 @@ function AppShell() {
               closeOnClick
               pauseOnHover
               theme="light"
+              limit={3}
             />
           </NotificationProvider>
         </SocketProvider>
@@ -77,19 +97,19 @@ function AppShell() {
   );
 }
 
-
+// ─────────────────────────────────────────────
+// Protected layout — guards all auth-required routes
+// ─────────────────────────────────────────────
 function ProtectedLayout() {
   const { user, authLoading } = useAuth();
-
-  if (authLoading) return <div>Loading...</div>;
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (authLoading) return <PageLoader />;
+  if (!user) return <Navigate to="/login" replace />;
   return <Outlet />;
 }
 
+// ─────────────────────────────────────────────
+// Router — flat structure, lazy pages wrapped in Suspense
+// ─────────────────────────────────────────────
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -101,11 +121,19 @@ export const router = createBrowserRouter([
       },
       {
         path: "register",
-        element: <RegisterPage />,
+        element: (
+          <SuspensePage>
+            <RegisterPage />
+          </SuspensePage>
+        ),
       },
       {
         path: "login",
-        element: <LoginPage />,
+        element: (
+          <SuspensePage>
+            <LoginPage />
+          </SuspensePage>
+        ),
       },
       {
         element: <ProtectedLayout />,
@@ -113,39 +141,75 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "home",
-            element: <HomePage />,
+            element: (
+              <SuspensePage>
+                <HomePage />
+              </SuspensePage>
+            ),
           },
           {
             path: "friends",
-            element: <FriendsPage />,
+            element: (
+              <SuspensePage>
+                <FriendsPage />
+              </SuspensePage>
+            ),
           },
           {
             path: "groups",
-            element: <GroupsPage />,
+            element: (
+              <SuspensePage>
+                <GroupsPage />
+              </SuspensePage>
+            ),
           },
           {
             path: "groups/:id",
-            element: <GroupDetailPage />,
+            element: (
+              <SuspensePage>
+                <GroupDetailPage />
+              </SuspensePage>
+            ),
           },
           {
             path: "profile",
-            element: <ProfilePage />,
+            element: (
+              <SuspensePage>
+                <ProfilePage />
+              </SuspensePage>
+            ),
           },
           {
             path: "profile/:id",
-            element: <ProfilePage />,
+            element: (
+              <SuspensePage>
+                <ProfilePage />
+              </SuspensePage>
+            ),
           },
           {
             path: "messages",
-            element: <MessagesPage />,
+            element: (
+              <SuspensePage>
+                <MessagesPage />
+              </SuspensePage>
+            ),
           },
           {
             path: "watch",
-            element: <WatchPage />,
+            element: (
+              <SuspensePage>
+                <WatchPage />
+              </SuspensePage>
+            ),
           },
           {
             path: "settings",
-            element: <SettingsPage />,
+            element: (
+              <SuspensePage>
+                <SettingsPage />
+              </SuspensePage>
+            ),
           },
         ],
       },
