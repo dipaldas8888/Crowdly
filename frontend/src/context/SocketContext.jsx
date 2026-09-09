@@ -4,10 +4,17 @@ import { useAuth } from "./AuthContext";
 
 const SocketContext = createContext(null);
 
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  import.meta.env.VITE_API_URL?.replace("/api", "") ||
-  "http://localhost:5000";
+const getSocketUrl = () => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/api\/?$/, "");
+  }
+  return "https://crowdly-2lol.onrender.com";
+};
+
+const SOCKET_URL = getSocketUrl();
 
 export function SocketProvider({ children }) {
   const { user } = useAuth();
@@ -25,7 +32,7 @@ export function SocketProvider({ children }) {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
+      console.log("Socket connected to:", SOCKET_URL, socket.id);
     });
 
     socket.on("onlineUsers", (users) => {

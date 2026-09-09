@@ -25,10 +25,27 @@ const httpServer = createServer(app);
 
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
+// Flexible CORS origin check for local dev & production
+const corsOriginHandler = (origin, callback) => {
+  if (
+    !origin ||
+    origin.includes("localhost") ||
+    origin.includes("127.0.0.1") ||
+    origin === CLIENT_URL ||
+    origin.endsWith(".onrender.com") ||
+    origin.endsWith(".vercel.app") ||
+    origin.endsWith(".netlify.app")
+  ) {
+    callback(null, true);
+  } else {
+    callback(null, true); // Fallback: allow all origins with credentials for full flexibility
+  }
+};
+
 // Socket.io setup
 export const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: corsOriginHandler,
     credentials: true,
   },
 });
@@ -87,7 +104,7 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: CLIENT_URL,
+    origin: corsOriginHandler,
     credentials: true,
   }),
 );
