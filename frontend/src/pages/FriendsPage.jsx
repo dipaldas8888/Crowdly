@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { apiRequest } from "../lib/api";
+import { useSocket } from "../context/SocketContext";
 import Navbar from "../components/Navbar";
 import LeftSidebar from "../components/LeftSidebar";
 import RightSidebar from "../components/RightSidebar";
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 export default function FriendsPage() {
+  const { onlineUsers } = useSocket();
   const [activeTab, setActiveTab] = useState("friends"); // friends | requests | suggested | search
   const [friends, setFriends] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -25,6 +27,12 @@ export default function FriendsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [searchLoading, setSearchLoading] = useState(false);
+
+  const isUserOnline = (userId) => {
+    if (!userId) return false;
+    const idStr = (userId._id || userId.id || userId).toString();
+    return onlineUsers?.some((uId) => uId?.toString() === idStr);
+  };
 
   const fetchFriendsData = async () => {
     try {
@@ -211,7 +219,7 @@ export default function FriendsPage() {
                           />
                           <span
                             className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white ${
-                              friend.isOnline ? "bg-emerald-500" : "bg-slate-300"
+                              isUserOnline(friend) ? "bg-emerald-500" : "bg-slate-300"
                             }`}
                           ></span>
                         </div>
@@ -222,10 +230,10 @@ export default function FriendsPage() {
                           <span className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                             <Circle
                               className={`w-2.5 h-2.5 fill-current ${
-                                friend.isOnline ? "text-emerald-500" : "text-slate-300"
+                                isUserOnline(friend) ? "text-emerald-500" : "text-slate-300"
                               }`}
                             />
-                            {friend.isOnline ? "Online" : "Offline"}
+                            {isUserOnline(friend) ? "Online" : "Offline"}
                           </span>
                         </div>
                       </div>

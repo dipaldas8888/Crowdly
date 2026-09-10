@@ -79,11 +79,11 @@ export default function RightSidebar() {
     return `${Math.floor(diffSec / 86400)}d ago`;
   };
 
-  // Check if a user is online via Socket or DB flag
+  // Check if a user is online strictly via real-time Socket onlineUsers list
   const isOnline = (userObj) => {
     if (!userObj) return false;
-    const uid = userObj._id || userObj.id;
-    return onlineUsers.includes(uid?.toString()) || Boolean(userObj.isOnline);
+    const uid = (userObj._id || userObj.id || userObj).toString();
+    return onlineUsers.some((id) => id?.toString() === uid);
   };
 
   // Sort friends: online first

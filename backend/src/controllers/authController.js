@@ -30,6 +30,7 @@ const sanitizeUser = (user) => ({
     whoCanMention: "Everyone",
     whoCanTag: "Everyone",
   },
+  savedPosts: user.savedPosts || [],
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });

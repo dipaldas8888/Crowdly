@@ -29,6 +29,7 @@ const ProfilePage      = lazy(() => import("./pages/ProfilePage"));
 const MessagesPage     = lazy(() => import("./pages/MessagesPage"));
 const WatchPage        = lazy(() => import("./pages/WatchPage"));
 const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
+const SavedPage        = lazy(() => import("./pages/SavedPage"));
 
 // ─────────────────────────────────────────────
 // MUI Theme — light, branded palette
@@ -208,6 +209,14 @@ export const router = createBrowserRouter([
             element: (
               <SuspensePage>
                 <SettingsPage />
+              </SuspensePage>
+            ),
+          },
+          {
+            path: "saved",
+            element: (
+              <SuspensePage>
+                <SavedPage />
               </SuspensePage>
             ),
           },

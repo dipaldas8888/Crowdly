@@ -2,30 +2,27 @@ import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import NotificationsDropdown from "./NotificationsDropdown";
+import CreatePortalModal from "./CreatePortalModal";
 import { Link, useLocation } from "react-router-dom";
 import {
   Search,
   Bell,
   MessageSquare,
-  LogOut,
   Home,
   Zap,
   Video,
   Users,
-  Settings,
   Layers,
-  Menu,
-  X,
+  Plus,
 } from "lucide-react";
-import MobileNav from "./MobileNav";
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const location = useLocation();
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showCreatePortal, setShowCreatePortal] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
@@ -92,7 +89,16 @@ export default function Navbar() {
           </nav>
 
           {/* ── Right Section: Actions & User Avatar ── */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 relative">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0 relative">
+            {/* Create Portal Action Button */}
+            <button
+              onClick={() => setShowCreatePortal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 text-white font-bold text-xs shadow-md shadow-blue-500/20 hover:scale-105 transition-all cursor-pointer"
+              title="Create Portal"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span className="hidden sm:inline">Create</span>
+            </button>
 
             {/* Mobile Search Toggle */}
             <button
@@ -127,7 +133,7 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Messages — hidden on mobile (in bottom nav) */}
+            {/* Messages — hidden on mobile */}
             <Link
               to="/messages"
               className={`hidden sm:flex p-2 sm:p-2.5 rounded-full transition-colors cursor-pointer ${
@@ -139,49 +145,6 @@ export default function Navbar() {
             >
               <MessageSquare className="w-5 h-5" />
             </Link>
-
-            {/* Settings Menu Button — desktop only */}
-            <div className="relative hidden md:block">
-              <button
-                onClick={() => setShowSettingsMenu((prev) => !prev)}
-                className="p-2 sm:p-2.5 text-slate-600 hover:bg-slate-100 rounded-full transition-colors cursor-pointer"
-                title="Settings & Options"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-
-              {showSettingsMenu && (
-                <div className="absolute right-0 top-11 bg-white border border-slate-200 rounded-2xl shadow-xl z-50 py-2 w-52 text-xs font-medium">
-                  <Link
-                    to="/profile"
-                    onClick={() => setShowSettingsMenu(false)}
-                    className="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700"
-                  >
-                    <Users className="w-4 h-4 text-blue-500" />
-                    <span>My Profile</span>
-                  </Link>
-                  <Link
-                    to="/settings"
-                    onClick={() => setShowSettingsMenu(false)}
-                    className="px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2.5 text-slate-700"
-                  >
-                    <Settings className="w-4 h-4 text-indigo-500" />
-                    <span>Settings & Privacy</span>
-                  </Link>
-                  <div className="h-[1px] bg-slate-100 my-1" />
-                  <button
-                    onClick={() => {
-                      setShowSettingsMenu(false);
-                      logout();
-                    }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-rose-50 flex items-center gap-2.5 text-rose-600 cursor-pointer"
-                  >
-                    <LogOut className="w-4 h-4 text-rose-500" />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              )}
-            </div>
 
             {/* User Profile Avatar */}
             <Link to="/profile" className="ml-0.5 sm:ml-1 flex items-center cursor-pointer">
@@ -197,30 +160,27 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Search Bar — expands below navbar */}
+        {/* Mobile Search Bar */}
         {showMobileSearch && (
-          <div className="sm:hidden px-3 pb-2.5 pt-1 border-t border-slate-100 bg-white flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="sm:hidden p-2.5 bg-slate-50 border-t border-slate-200">
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                autoFocus
                 type="text"
                 placeholder="Search Crowdly..."
-                className="w-full bg-slate-100 rounded-full pl-8 pr-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all"
+                className="w-full bg-white border border-slate-200 rounded-full pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                autoFocus
               />
             </div>
-            <button
-              onClick={() => setShowMobileSearch(false)}
-              className="p-1.5 rounded-full hover:bg-slate-100 text-slate-500 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         )}
       </header>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileNav />
+      {/* Global Create Portal Modal */}
+      <CreatePortalModal
+        isOpen={showCreatePortal}
+        onClose={() => setShowCreatePortal(false)}
+      />
     </>
   );
 }

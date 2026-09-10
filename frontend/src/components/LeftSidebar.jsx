@@ -1,28 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Link, useLocation } from "react-router-dom";
 import {
   Home,
   Users,
   Tv,
-  Clock,
-  Store,
   MessageSquare,
   Settings,
   Layers,
   Bookmark,
-  Calendar,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 
 export default function LeftSidebar() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     return localStorage.getItem("crowdly_sidebar_collapsed") === "true";
   });
+
+  // Automatically collapse sidebar on Settings page
+  useEffect(() => {
+    if (location.pathname === "/settings") {
+      setIsCollapsed(true);
+    }
+  }, [location.pathname]);
 
   const toggleCollapse = () => {
     setIsCollapsed((prev) => {
@@ -41,10 +46,7 @@ export default function LeftSidebar() {
   ];
 
   const secondaryItems = [
-    { icon: Bookmark, label: "Saved", path: "#", color: "text-amber-600 bg-amber-50" },
-    { icon: Clock, label: "Memories", path: "#", color: "text-rose-500 bg-rose-50" },
-    { icon: Calendar, label: "Events", path: "#", color: "text-teal-600 bg-teal-50" },
-    { icon: Store, label: "Marketplace", path: "#", color: "text-orange-500 bg-orange-50" },
+    { icon: Bookmark, label: "Saved", path: "/saved", color: "text-amber-600 bg-amber-50" },
     { icon: Settings, label: "Settings", path: "/settings", color: "text-slate-600 bg-slate-100" },
   ];
 
@@ -197,14 +199,33 @@ export default function LeftSidebar() {
         </div>
       </div>
 
-      {/* Footer */}
-      {!isCollapsed && (
-        <div className="mt-auto pt-4 pb-1 px-2.5">
-          <p className="text-[10px] text-slate-400 font-medium">
-            © 2026 Crowdly · All rights reserved
-          </p>
-        </div>
-      )}
+      {/* Logout & Footer Section */}
+      <div className="mt-auto pt-3 border-t border-slate-100 space-y-2">
+        <button
+          onClick={logout}
+          title={isCollapsed ? "Logout" : undefined}
+          className={`w-full flex items-center ${
+            isCollapsed ? "justify-center" : "gap-3 px-2.5"
+          } py-2 rounded-xl text-rose-600 font-bold hover:bg-rose-50 cursor-pointer transition-colors group`}
+        >
+          <div
+            className={`${
+              isCollapsed ? "w-9 h-9 rounded-xl" : "w-8 h-8 rounded-lg"
+            } bg-rose-50 group-hover:bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105`}
+          >
+            <LogOut className={isCollapsed ? "w-4.5 h-4.5 stroke-[2]" : "w-4 h-4"} />
+          </div>
+          {!isCollapsed && <span className="text-sm font-bold">Logout</span>}
+        </button>
+
+        {!isCollapsed && (
+          <div className="px-2.5 pt-1">
+            <p className="text-[10px] text-slate-400 font-medium">
+              © 2026 Crowdly · All rights reserved
+            </p>
+          </div>
+        )}
+      </div>
     </aside>
   );
 }

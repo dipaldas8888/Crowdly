@@ -16,6 +16,7 @@ import {
   UserCircle,
   Zap,
   AlignJustify,
+  Bookmark,
 } from "lucide-react";
 
 export default function MobileNav() {
@@ -42,6 +43,7 @@ export default function MobileNav() {
     { icon: Layers, label: "Groups", path: "/groups", color: "bg-amber-100 text-amber-600" },
     { icon: Video, label: "Watch", path: "/watch", color: "bg-rose-100 text-rose-600" },
     { icon: MessageSquare, label: "Messages", path: "/messages", color: "bg-sky-100 text-sky-600" },
+    { icon: Bookmark, label: "Saved Posts", path: "/saved", color: "bg-amber-100 text-amber-600" },
     { icon: Settings, label: "Settings", path: "/settings", color: "bg-slate-100 text-slate-500" },
   ];
 

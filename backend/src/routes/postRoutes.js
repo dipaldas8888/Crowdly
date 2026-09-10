@@ -11,17 +11,21 @@ import {
   updatePost,
   deletePost,
   sharePost,
+  toggleSavePost,
+  getSavedPosts,
 } from "../controllers/postController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
+router.get("/saved", protect, getSavedPosts);
 router.post("/", protect, upload.single("image"), createPost);
 router.get("/", getFeed);
 router.put("/:id", protect, upload.single("image"), updatePost);
 router.delete("/:id", protect, deletePost);
 router.put("/like/:id", protect, likePost);
+router.post("/:id/save", protect, toggleSavePost);
 router.post("/comment/:id", protect, commentPost);
 router.put("/:id/comments/:commentId", protect, updateComment);
 router.delete("/:id/comments/:commentId", protect, deleteComment);

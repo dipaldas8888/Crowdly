@@ -22,6 +22,7 @@ import {
   Check,
   Repeat,
   Loader2,
+  Bookmark,
 } from "lucide-react";
 
 const DEFAULT_AVATAR =
@@ -376,7 +377,7 @@ function CommentRow({ comment, postId, postOwnerId, user, setPosts, depth = 0 })
 
 // ─── Main PostCard ────────────────────────────────────────────────────────────
 export default function PostCard({ post, setPosts }) {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -397,6 +398,39 @@ export default function PostCard({ post, setPosts }) {
   const postOwnerId = post.user?._id || post.user;
   const isOwner = postOwnerId === user?._id || postOwnerId === user?.id;
   const isLiked = post.likes?.some((u) => (u._id || u) === user?._id);
+
+  const isSaved = user?.savedPosts?.some(
+    (id) => (id._id || id) === post._id
+  );
+
+  const handleSave = async () => {
+    const updatedSavedPosts = isSaved
+      ? (user?.savedPosts || []).filter((id) => (id._id || id) !== post._id)
+      : [...(user?.savedPosts || []), post._id];
+
+    setUser((prev) => (prev ? { ...prev, savedPosts: updatedSavedPosts } : prev));
+
+    try {
+      const data = await apiRequest(`/posts/${post._id}/save`, {
+        method: "POST",
+      });
+      if (data?.savedPosts) {
+        setUser((prev) => (prev ? { ...prev, savedPosts: data.savedPosts } : prev));
+      }
+      toast.success(data.message || (isSaved ? "Removed from saved posts" : "Post saved!"));
+    } catch (err) {
+      console.error(err);
+      toast.error(err.message || "Failed to save post");
+      setUser((prev) =>
+        prev
+          ? {
+              ...prev,
+              savedPosts: user?.savedPosts || [],
+            }
+          : prev
+      );
+    }
+  };
 
   const handleLike = async () => {
     setPosts((prev) =>
@@ -610,14 +644,30 @@ export default function PostCard({ post, setPosts }) {
                   >
                     <Trash2 className="w-4 h-4 text-rose-500" /> Delete Post
                   </button>
+                  <button
+                    onClick={() => { handleSave(); setShowMenu(false); }}
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer border-t border-slate-100"
+                  >
+                    <Bookmark className={`w-4 h-4 ${isSaved ? "text-amber-500 fill-amber-500" : "text-amber-500"}`} />
+                    {isSaved ? "Unsave Post" : "Save Post"}
+                  </button>
                 </>
               ) : (
-                <button
-                  onClick={handleOpenShareModal}
-                  className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
-                >
-                  <Repeat className="w-4 h-4 text-blue-500" /> Share Post
-                </button>
+                <>
+                  <button
+                    onClick={handleOpenShareModal}
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer"
+                  >
+                    <Repeat className="w-4 h-4 text-blue-500" /> Share Post
+                  </button>
+                  <button
+                    onClick={() => { handleSave(); setShowMenu(false); }}
+                    className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 text-slate-700 cursor-pointer border-t border-slate-100"
+                  >
+                    <Bookmark className={`w-4 h-4 ${isSaved ? "text-amber-500 fill-amber-500" : "text-amber-500"}`} />
+                    {isSaved ? "Unsave Post" : "Save Post"}
+                  </button>
+                </>
               )}
             </div>
           )}
@@ -819,6 +869,22 @@ export default function PostCard({ post, setPosts }) {
         >
           <Share2 className="w-4 h-4 text-slate-500" />
           <span>Share</span>
+        </button>
+
+        <button
+          onClick={handleSave}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            isSaved
+              ? "text-amber-600 bg-amber-50 hover:bg-amber-100"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Bookmark
+            className={`w-4 h-4 transition-all ${
+              isSaved ? "fill-amber-500 stroke-amber-500 scale-110" : "text-slate-500"
+            }`}
+          />
+          <span>{isSaved ? "Saved" : "Save"}</span>
         </button>
       </div>
 

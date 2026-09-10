@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Post from "../models/Post.js";
+import User from "../models/User.js";
 import { ApiError } from "../utils/apiError.js";
 import cloudinary from "../config/cloudinary.js";
 import { createAndSendNotification } from "../utils/notificationHelper.js";
@@ -474,4 +475,84 @@ export const deleteComment = async (req, res, next) => {
     next(err);
   }
 };
+
+// Toggle Save / Bookmark a post
+export const toggleSavePost = async (req, res, next) => {
+  try {
+    const { id: postId } = req.params;
+    const userId = req.user;
+
+    const post = await Post.findById(postId);
+    if (!post) {
+      throw new ApiError(404, "Post not found");
+    }
+
+    const userObj = await User.findById(userId);
+    if (!userObj) {
+      throw new ApiError(404, "User not found");
+    }
+
+    const isSaved = userObj.savedPosts.some(
+      (savedId) => savedId.toString() === postId.toString()
+    );
+
+    if (isSaved) {
+      userObj.savedPosts = userObj.savedPosts.filter(
+        (savedId) => savedId.toString() !== postId.toString()
+      );
+    } else {
+      userObj.savedPosts.push(postId);
+    }
+
+    await userObj.save();
+
+    res.json({
+      saved: !isSaved,
+      savedPosts: userObj.savedPosts,
+      message: !isSaved ? "Post saved to your bookmarks" : "Post removed from saved",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get all saved posts for current user
+export const getSavedPosts = async (req, res, next) => {
+  try {
+    const userId = req.user;
+
+    const userObj = await User.findById(userId).populate({
+      path: "savedPosts",
+      populate: [
+        { path: "user", select: "username avatar" },
+        { path: "likes", select: "username avatar" },
+        { path: "taggedFriends", select: "username avatar" },
+        { path: "group", select: "name coverImage" },
+        {
+          path: "originalPost",
+          populate: [
+            { path: "user", select: "username avatar" },
+            { path: "taggedFriends", select: "username avatar" },
+          ],
+        },
+        { path: "comments.user", select: "username avatar" },
+        { path: "comments.replies.user", select: "username avatar" },
+      ],
+    });
+
+    if (!userObj) {
+      throw new ApiError(404, "User not found");
+    }
+
+    // Filter out any deleted posts that were nullified
+    const validSavedPosts = (userObj.savedPosts || [])
+      .filter((p) => p !== null)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.json({ posts: validSavedPosts });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
