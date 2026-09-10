@@ -28,8 +28,15 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
   const [showForgotModal, setShowForgotModal] = useState(false);
   const [showRegisterOTPModal, setShowRegisterOTPModal] = useState(false);
 
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate("/home", { replace: true });
+    }
+  }, [user, navigate]);
+
 
   const handleSignIn = async (e) => {
     e.preventDefault();

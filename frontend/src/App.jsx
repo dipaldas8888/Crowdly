@@ -117,10 +117,6 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       {
-        index: true,
-        element: <Navigate to="/login" replace />,
-      },
-      {
         path: "register",
         element: (
           <SuspensePage>
@@ -140,6 +136,14 @@ export const router = createBrowserRouter([
         element: <ProtectedLayout />,
         loader: requireAuth,
         children: [
+          {
+            index: true,
+            element: (
+              <SuspensePage>
+                <HomePage />
+              </SuspensePage>
+            ),
+          },
           {
             path: "home",
             element: (
