@@ -33,7 +33,7 @@ export default function CrowdlyLogo({
 
       {/* Brand Typography */}
       {showText && (
-        <div className="flex items-baseline leading-none select-none">
+        <div className="hidden xs:flex items-baseline leading-none select-none">
           <span
             className={`font-black tracking-tight transition-colors ${
               lightText

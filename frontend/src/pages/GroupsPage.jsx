@@ -40,7 +40,7 @@ export default function GroupsPage() {
       setLoading(true);
       const [allGroupsRes, myGroupsRes] = await Promise.all([
         apiRequest("/groups"),
-        apiRequest("/groups/user/my-groups"),
+        apiRequest("/groups/my"),
       ]);
 
       setGroups(allGroupsRes || []);

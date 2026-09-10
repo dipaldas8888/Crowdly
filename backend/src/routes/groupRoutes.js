@@ -17,6 +17,8 @@ const router = express.Router();
 router.post("/", protect, upload.single("coverImage"), createGroup);
 router.get("/", protect, getGroups);
 router.get("/my", protect, getMyGroups);
+router.get("/user/my-groups", protect, getMyGroups);
+
 router.get("/:id", protect, getGroupById);
 router.post("/:id/join", protect, joinGroup);
 router.post("/:id/leave", protect, leaveGroup);

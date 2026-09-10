@@ -42,13 +42,13 @@ export default function Navbar() {
         {/* Top Blue Accent Stripe */}
         <div className="h-[3px] bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 w-full" />
 
-        <div className="max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 h-14 flex items-center justify-between gap-2 sm:gap-3">
+        <div className="max-w-[1600px] mx-auto px-2.5 sm:px-4 md:px-6 h-14 flex items-center justify-between gap-1.5 sm:gap-3">
           {/* ── Left: Brand Logo & Search & Hamburger ── */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-5 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-3 lg:gap-5 shrink-0">
             {/* Mobile/Tablet Hamburger Button */}
             <button
               onClick={() => setShowMobileDrawer(true)}
-              className="lg:hidden p-2 rounded-xl text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
+              className="lg:hidden p-1.5 sm:p-2 rounded-xl text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
               title="Open Navigation Menu"
             >
               <AlignJustify className="w-5 h-5 stroke-[2.5]" />
@@ -97,7 +97,7 @@ export default function Navbar() {
             {/* Create Portal Action Button */}
             <button
               onClick={() => setShowCreatePortal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 text-white font-bold text-xs shadow-md shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 text-white font-bold text-xs shadow-md shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
               title="Create Portal"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
@@ -107,7 +107,7 @@ export default function Navbar() {
             {/* Mobile Search Toggle */}
             <button
               onClick={() => setShowMobileSearch((v) => !v)}
-              className="sm:hidden p-2 rounded-full text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="sm:hidden p-1.5 rounded-full text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               title="Search"
             >
               <Search className="w-5 h-5" />
@@ -117,7 +117,7 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setShowNotifications((prev) => !prev)}
-                className={`relative p-2 sm:p-2.5 rounded-full transition-colors cursor-pointer ${
+                className={`relative p-1.5 sm:p-2.5 rounded-full transition-colors cursor-pointer ${
                   showNotifications
                     ? "bg-blue-50 text-blue-600"
                     : "text-slate-600 hover:bg-slate-100"
@@ -126,7 +126,7 @@ export default function Navbar() {
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-0.5 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
+                  <span className="absolute top-0.5 right-0.5 min-w-[16px] h-[16px] px-0.5 bg-rose-500 text-white text-[9px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -137,10 +137,10 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Messages */}
+            {/* Messages — hidden on mobile since it is in bottom bar */}
             <Link
               to="/messages"
-              className={`p-2 sm:p-2.5 rounded-full transition-colors cursor-pointer ${
+              className={`hidden sm:flex p-2 sm:p-2.5 rounded-full transition-colors cursor-pointer ${
                 isActive("/messages")
                   ? "text-blue-600 bg-blue-50"
                   : "text-slate-600 hover:bg-slate-100"
