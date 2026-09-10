@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import ForgotPasswordModal from "../components/ForgotPasswordModal";
 import RegisterOTPModal from "../components/RegisterOTPModal";
+import CrowdlyLogo from "../components/CrowdlyLogo";
 import { apiRequest } from "../lib/api";
 import {
   Eye,
@@ -76,13 +77,7 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
         <div className="lg:col-span-7 bg-slate-50/60 p-6 sm:p-10 lg:p-14 flex flex-col justify-between relative overflow-hidden">
           {/* Brand Logo Header */}
           <div className="flex items-center gap-3">
-            <div className="h-10 px-3 bg-[#0b1b2d] rounded-2xl flex items-center justify-center border border-slate-800/20 shadow-sm transition-all hover:scale-105">
-              <img
-                src="/logo.png"
-                alt="Crowdly"
-                className="h-7 w-auto object-contain"
-              />
-            </div>
+            <CrowdlyLogo size="lg" to="/login" />
           </div>
 
           {/* Center Graphic Showcase Collage */}

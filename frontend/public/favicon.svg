@@ -1,10 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
-  <rect width="100" height="100" rx="28" fill="url(#grad)" />
-  <path d="M57 18L26 55H50L43 82L74 45H50L57 18Z" fill="white" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect width="100" height="100" rx="28" fill="url(#bgGrad)" />
+  <!-- Glowing C Arc Emblem -->
+  <path d="M68 32C62 25 53 22 43 23C28 25 18 38 18 53C18 68 28 80 44 80C55 80 64 74 70 65" 
+        stroke="url(#arcGrad)" stroke-width="9" stroke-linecap="round" />
+  <!-- Community Connection Nodes & Sparks -->
+  <circle cx="68" cy="32" r="5" fill="#FBBF24" />
+  <circle cx="43" cy="23" r="4.5" fill="#60A5FA" />
+  <circle cx="21" cy="42" r="4.5" fill="#93C5FD" />
+  <circle cx="21" cy="62" r="4.5" fill="#A5B4FC" />
+  <circle cx="44" cy="80" r="4.5" fill="#60A5FA" />
+  <circle cx="70" cy="65" r="5" fill="#FBBF24" />
+  <polygon points="50,42 53,50 61,50 54,55 57,63 50,58 43,63 46,55 39,50 47,50" fill="#FDE047" opacity="0.9" />
   <defs>
-    <linearGradient id="grad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
       <stop stop-color="#2563EB"/>
-      <stop offset="1" stop-color="#4F46E5"/>
+      <stop offset="0.5" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#312E81"/>
+    </linearGradient>
+    <linearGradient id="arcGrad" x1="20" y1="20" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#93C5FD"/>
+      <stop offset="0.5" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FCD34D"/>
     </linearGradient>
   </defs>
 </svg>

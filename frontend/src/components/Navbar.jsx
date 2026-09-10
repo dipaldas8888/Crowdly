@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../context/NotificationContext";
 import NotificationsDropdown from "./NotificationsDropdown";
 import CreatePortalModal from "./CreatePortalModal";
+import CrowdlyLogo from "./CrowdlyLogo";
 import { Link, useLocation } from "react-router-dom";
 import {
   Search,
@@ -53,24 +54,8 @@ export default function Navbar() {
               <AlignJustify className="w-5 h-5 stroke-[2.5]" />
             </button>
 
-            <Link
-              to="/home"
-              className="flex items-center gap-2 group cursor-pointer"
-              title="Crowdly Home"
-            >
-              {/* Glowing Icon Badge */}
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 text-white flex items-center justify-center font-black text-lg shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
-                <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 fill-amber-300" />
-              </div>
+            <CrowdlyLogo size="md" showText={true} />
 
-              {/* Vibrant Brand Text */}
-              <div className="hidden xs:flex items-baseline leading-none">
-                <span className="text-xl sm:text-2xl font-black text-blue-600 tracking-tight group-hover:text-blue-700 transition-colors">
-                  Crowdly
-                </span>
-                <span className="text-xl sm:text-2xl font-black text-amber-500">.</span>
-              </div>
-            </Link>
 
             {/* Search Bar — hidden on xs, inline on sm+ */}
             <div className="relative hidden sm:block w-36 md:w-52 lg:w-64">
@@ -259,15 +244,7 @@ export default function Navbar() {
             <div className="absolute left-0 top-0 bottom-0 w-[290px] sm:w-[320px] bg-white shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200">
               {/* Header Banner */}
               <div className="p-5 bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-between shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-xs">
-                    <Zap className="w-5 h-5 text-amber-300 fill-amber-300" />
-                  </div>
-                  <div>
-                    <h2 className="font-black text-white text-lg leading-tight tracking-tight">Crowdly</h2>
-                    <p className="text-blue-100 text-[11px] font-medium">Social Community</p>
-                  </div>
-                </div>
+                <CrowdlyLogo size="md" lightText={true} />
                 <button
                   onClick={() => setShowMobileDrawer(false)}
                   className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition-colors cursor-pointer"
