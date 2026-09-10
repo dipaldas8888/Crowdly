@@ -1,223 +1,190 @@
-# Crowdly
+# Crowdly · Modern Full-Stack Social Networking Platform
 
-Crowdly is a full-stack social feed application built with a React frontend and an Express backend. Users can register, log in, create posts with text or images, like posts, and add comments through a cookie-based authenticated flow.
+Crowdly is a full-stack, real-time social networking application built with **React 19**, **Node.js/Express 5**, **MongoDB**, **Socket.IO**, and **Tailwind CSS**. It delivers a rich, interactive user experience with real-time messaging, stories, group communities, post bookmarking, notifications, and media sharing.
 
-## Features
+---
 
-- User registration and login
-- Secure authentication with JWT stored in HTTP-only cookies
-- Protected user session lookup with `/auth/me`
-- Create posts with text and optional image upload
-- Image upload support with Cloudinary
-- Public feed showing the latest posts first
-- Like and unlike posts
-- Add comments to posts
-- Frontend route protection for authenticated pages
-- Request validation and centralized backend error handling
+## ✨ Features Breakdown
 
-## Tech Stack
+### 🔐 Authentication & Security
+- **OTP Email Verification**: 6-digit email OTP for secure registration and password reset flows using Nodemailer.
+- **JWT HTTP-Only Cookies**: Secure session management utilizing HTTP-only, SameSite cookies to protect against XSS attacks.
+- **Privacy Settings**: Granular user privacy preferences (control who can message, follow, comment, tag, or mention).
+- **Zod Validation**: Strict request payload schema validation on all incoming API data.
+
+### 📰 Dynamic Feed & Post Management
+- **Rich Post Creation**: Share text, images (Cloudinary integration), location check-ins, and tag friends.
+- **Post Reposting / Sharing**: Repost existing content with personalized captions and automatic share counter tracking.
+- **Multi-Level Comments & Replies**: Nested comment threads with likes, replies, and author authorization rules.
+- **Optimistic UI Updates**: Instant visual feedback for likes, comments, and post actions before API resolution.
+
+### 🔖 Saved Posts & Bookmarks
+- **Bookmark Content**: Save any post to a personal collection with one click.
+- **Dedicated `/saved` Page**: Filter and search through bookmarked posts by text, author username, or location.
+
+### 📖 Interactive Stories System
+- **24-Hour Ephemeral Stories**: Post visual stories that automatically expire after 24 hours.
+- **Interactive Story Viewer**: Fullscreen modal with progress indicators, user navigation, and viewer analytics.
+
+### 👥 Groups & Communities
+- **Community Hub**: Discover public/private groups or launch custom communities with cover media and privacy rules.
+- **Group Feeds**: Filter feed content by joined groups and manage group memberships.
+
+### 💬 Real-Time Messaging & Presence
+- **Socket.IO Chat**: Instant 1-on-1 messaging with live unread counts, typing indicators, and message history.
+- **Online Presence**: Live status badges showing active friends and real-time socket connection tracking.
+
+### 🔔 Notification Engine
+- **Activity Alerts**: Real-time notifications for likes, comments, shares, and friend requests.
+- **Interactive Dropdown**: Mark notifications as read, view timestamps, and jump directly to relevant content.
+
+### 🎥 Watch & Video Hub
+- **Video Sharing**: Dedicated video page for exploring short-form and long-form video content with streaming playback.
+
+---
+
+## 🛠️ Tech Stack
 
 ### Frontend
-
-- React 19
-- Vite
-- React Router DOM
-- Material UI
-- Axios
+- **Framework**: React 19 + Vite 8
+- **Styling**: Tailwind CSS v4 + Material-UI (MUI) Theme Engine
+- **Icons**: Lucide React
+- **Routing**: React Router DOM v7 (SPA routing with code-splitting via `lazy` & `Suspense`)
+- **Real-Time Data**: Socket.io-client
+- **Toasts & Feedback**: React Toastify
 
 ### Backend
+- **Runtime**: Node.js v24
+- **Framework**: Express 5
+- **Database**: MongoDB with Mongoose ORM
+- **Real-Time Engine**: Socket.IO
+- **File & Media Storage**: Cloudinary + Multer
+- **Email Service**: Nodemailer
+- **Validation & Auth**: Zod, JSON Web Tokens (JWT), bcryptjs
 
-- Node.js
-- Express 5
-- MongoDB
-- Mongoose
-- JWT
-- bcryptjs
-- Multer
-- Cloudinary
-- Zod
+---
 
-## Project Structure
+## 📁 Project Architecture
 
 ```text
 Crowdly/
-├── frontend/
+├── frontend/                     # React Frontend App
+│   ├── public/                   # Static assets & favicon
 │   ├── src/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── lib/
-│   │   └── pages/
-│   └── package.json
-├── backend/
+│   │   ├── components/           # Navbar, LeftSidebar, RightSidebar, PostCard, Stories, MobileNav, etc.
+│   │   ├── context/              # AuthContext, SocketContext, NotificationContext
+│   │   ├── lib/                  # Shared API client & helpers
+│   │   ├── pages/                # HomePage, ProfilePage, SavedPage, GroupsPage, WatchPage, MessagesPage, etc.
+│   │   ├── App.jsx               # Route definitions & app shell
+│   │   └── main.jsx              # Entry point
+│   ├── package.json
+│   └── vite.config.js
+│
+├── backend/                      # Node.js Express API Server
 │   ├── src/
-│   │   ├── config/
-│   │   ├── controllers/
-│   │   ├── middleware/
-│   │   ├── models/
-│   │   ├── routes/
-│   │   ├── utils/
-│   │   └── validators/
-│   ├── server.js
+│   │   ├── config/               # Cloudinary & MongoDB configurations
+│   │   ├── controllers/          # Auth, Post, Group, Story, Message, Friend, Notification controllers
+│   │   ├── middleware/           # JWT Auth, Multer File Upload, Error Handler
+│   │   ├── models/               # Mongoose Schemas (User, Post, Group, Story, Message, OTP, Notification)
+│   │   ├── routes/               # Express API Routes
+│   │   ├── socket/               # Real-time Socket.IO handler
+│   │   ├── utils/                # Email sender, JWT generator, custom API error handler
+│   │   └── validators/           # Zod schema validators
+│   ├── server.js                 # Express server bootstrap & Socket.IO server creation
 │   └── package.json
+│
 └── README.md
 ```
 
-## Frontend Overview
+---
 
-The frontend is a Vite-powered React app styled with Material UI.
+## 🔌 Key API Endpoints
 
-Key responsibilities:
+### 🔑 Authentication
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/auth/send-register-otp` | Dispatch 6-digit OTP to user email |
+| `POST` | `/api/auth/verify-otp-register` | Verify OTP and create user account |
+| `POST` | `/api/auth/login` | Authenticate user & issue HTTP-only cookie |
+| `GET` | `/api/auth/me` | Fetch authenticated user session |
+| `POST` | `/api/auth/forgot-password` | Dispatch password reset OTP |
+| `POST` | `/api/auth/reset-password` | Reset password using OTP code |
+| `POST` | `/api/auth/logout` | Revoke session cookie |
 
-- Handles registration and login forms
-- Manages the authenticated user with `AuthContext`
-- Protects the `/home` route and redirects unauthenticated users
-- Connects to the backend with Axios using `withCredentials: true`
-- Shows the main feed, post creation form, and post interactions
+### 📝 Posts & Bookmarks
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/posts` | Fetch paginated feed posts |
+| `POST` | `/api/posts` | Create new post with media/location/tags |
+| `PUT` | `/api/posts/like/:id` | Toggle like on post |
+| `POST` | `/api/posts/comment/:id` | Add comment to post |
+| `POST` | `/api/posts/:id/save` | Toggle save/bookmark post |
+| `GET` | `/api/posts/saved` | Fetch all saved posts for user |
+| `POST` | `/api/posts/share/:id` | Repost content to user feed |
 
-Important frontend areas:
+### 📖 Stories & Groups
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/stories` | Fetch active (24h) stories |
+| `POST` | `/api/stories` | Upload new story media |
+| `GET` | `/api/groups` | List communities |
+| `POST` | `/api/groups` | Create new group community |
 
-- `src/pages/RegisterPage.jsx`: user sign-up UI
-- `src/pages/LoginPage.jsx`: user sign-in UI
-- `src/pages/HomePage.jsx`: feed page for authenticated users
-- `src/components/CreatePost.jsx`: create post with text/image
-- `src/components/PostCard.jsx`: likes and comments UI
-- `src/context/AuthContext.jsx`: auth state and session methods
-- `src/lib/api.js`: shared API helper and base URL setup
+---
 
-## Backend Overview
+## 🚀 Local Development Setup
 
-The backend is an Express API connected to MongoDB with Mongoose.
+### 1. Prerequisites
+- Node.js (v18+)
+- MongoDB instance (Local or MongoDB Atlas)
+- Cloudinary Account (for image/video uploads)
 
-Key responsibilities:
+### 2. Backend Setup
+```bash
+cd backend
+npm install
+```
 
-- Registers and authenticates users
-- Issues JWT tokens in HTTP-only cookies
-- Protects authenticated routes with middleware
-- Stores users and posts in MongoDB
-- Accepts image uploads through Multer memory storage
-- Uploads images to Cloudinary
-- Validates auth payloads with Zod
-- Returns structured JSON errors through a central error handler
-
-Important backend areas:
-
-- `server.js`: app bootstrap, middleware, routes, and DB startup
-- `src/controllers/authController.js`: register, login, logout, get current user
-- `src/controllers/postController.js`: create posts, fetch feed, like, comment
-- `src/routes/authRoutes.js`: auth endpoints
-- `src/routes/postRoutes.js`: post endpoints
-- `src/middleware/authMiddleware.js`: JWT cookie protection
-- `src/middleware/uploadMiddleware.js`: image upload handling
-- `src/models/User.js`: user schema
-- `src/models/Post.js`: post schema
-
-## API Endpoints
-
-### Auth
-
-- `POST /api/auth/register` - create a new account
-- `POST /api/auth/login` - log in and set auth cookie
-- `GET /api/auth/me` - get current authenticated user
-- `POST /api/auth/logout` - clear auth cookie
-
-### Posts
-
-- `GET /api/posts` - fetch all posts
-- `POST /api/posts` - create a post with text and optional image
-- `PUT /api/posts/like/:id` - like or unlike a post
-- `POST /api/posts/comment/:id` - add a comment to a post
-
-## Environment Variables
-
-Create a `.env` file inside `backend/`:
-
+Create a `.env` file in `backend/`:
 ```env
 PORT=5000
 NODE_ENV=development
-MONGO_URL=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+MONGO_URL=mongodb://localhost:27017/crowdly
+JWT_SECRET=your_super_secret_jwt_key
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
 ```
 
-Optional frontend environment file inside `frontend/`:
+Start the backend server:
+```bash
+npm run dev
+```
 
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+```
+
+Create a `.env` file in `frontend/`:
 ```env
 VITE_API_URL=http://localhost:5000/api
 ```
 
-## Getting Started
-
-### 1. Install dependencies
-
+Start the frontend server:
 ```bash
-cd backend
-npm install
-```
-
-```bash
-cd frontend
-npm install
-```
-
-### 2. Start the backend
-
-```bash
-cd backend
 npm run dev
 ```
+Open `http://localhost:5173` (or port indicated by Vite) in your browser.
 
-### 3. Start the frontend
+---
 
-```bash
-cd frontend
-npm run dev
-```
+## 🌐 Deployment
 
-The frontend runs on `http://localhost:5173` and the backend runs on `http://localhost:5000`.
-
-## Authentication Flow
-
-- User logs in with email and password
-- Backend verifies credentials and signs a JWT
-- JWT is stored in an HTTP-only cookie named `token`
-- Frontend sends credentials automatically with each request
-- Protected routes verify the cookie before returning user-specific actions
-
-## Data Models
-
-### User
-
-- `username`
-- `email`
-- `password`
-- `createdAt`
-- `updatedAt`
-
-### Post
-
-- `user`
-- `text`
-- `image`
-- `likes`
-- `comments`
-- `createdAt`
-- `updatedAt`
-
-## Notes
-
-- Image uploads are limited to 5 MB and must be valid image files
-- CORS is currently configured for `http://localhost:5173`
-- Posts are sorted by newest first in the feed
-- Registration requires a username, valid email, and password with at least 6 characters
-
-## Future Improvements
-
-- Delete and edit posts
-- User profiles
-- Better error and success toasts in the frontend
-- Pagination or infinite scrolling
-- Real-time updates
-- Automated tests
-- Deployment configuration for production
+- **Frontend**: Deployed on **Vercel** with single-page app (SPA) rewrite rules in `vercel.json`.
+- **Backend**: Deployed on **Render** / **Railway** with Cloudinary media CDN integration and MongoDB Atlas database clustering.
