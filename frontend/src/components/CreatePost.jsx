@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
 import { apiRequest } from "../lib/api";
-import { Image, MapPin, Tag, X, Check } from "lucide-react";
+import { Image, MapPin, Tag, X, Check, Navigation, Loader2 } from "lucide-react";
 
 export default function CreatePost({ setPosts, groupId }) {
   const { user } = useAuth();
@@ -14,6 +14,13 @@ export default function CreatePost({ setPosts, groupId }) {
   const [showFriendsPicker, setShowFriendsPicker] = useState(false);
   const [friendsList, setFriendsList] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Free OpenStreetMap Nominatim Place Search & GPS Detection State
+  const [placeSuggestions, setPlaceSuggestions] = useState([]);
+  const [searchingLocation, setSearchingLocation] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
+  const [locationInput, setLocationInput] = useState("");
+  const [locationCoords, setLocationCoords] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -27,6 +34,93 @@ export default function CreatePost({ setPosts, groupId }) {
     };
     fetchFriends();
   }, []);
+
+  // Debounced search using OpenStreetMap Nominatim API
+  useEffect(() => {
+    if (!locationInput.trim() || locationInput.length < 2) {
+      setPlaceSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearchingLocation(true);
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+            locationInput
+          )}&addressdetails=1&limit=5`,
+          {
+            headers: {
+              "Accept-Language": "en-US,en;q=0.9",
+            },
+          }
+        );
+        const data = await res.json();
+        setPlaceSuggestions(data || []);
+      } catch (err) {
+        console.error("Location search error:", err);
+      } finally {
+        setSearchingLocation(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [locationInput]);
+
+  // Use Browser Geolocation API + Nominatim Reverse Geocoding
+  const handleDetectCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser");
+      return;
+    }
+
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+            {
+              headers: {
+                "Accept-Language": "en-US,en;q=0.9",
+              },
+            }
+          );
+          const data = await res.json();
+          const addr = data.address || {};
+          const city = addr.city || addr.town || addr.village || addr.suburb || addr.county || "";
+          const state = addr.state || "";
+          const country = addr.country || "";
+
+          const formatted = [city, state, country].filter(Boolean).join(", ");
+          const finalLocation =
+            formatted || data.display_name?.split(",").slice(0, 3).join(",") || "Current Location";
+
+          setLocation(finalLocation);
+          setLocationInput(finalLocation);
+          setLocationCoords({ lat: latitude, lng: longitude });
+          setPlaceSuggestions([]);
+          toast.success(`Location set: ${finalLocation}`);
+        } catch (err) {
+          console.error("Reverse geocoding error:", err);
+          toast.error("Failed to fetch address for current location");
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        toast.error(
+          error.code === 1
+            ? "Location access permission denied"
+            : "Could not retrieve your position"
+        );
+        setDetectingLocation(false);
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
 
   const toggleTagFriend = (friendId) => {
     setTaggedFriends((prev) =>
@@ -42,6 +136,7 @@ export default function CreatePost({ setPosts, groupId }) {
     const formData = new FormData();
     formData.append("text", text);
     if (location) formData.append("location", location);
+    if (locationCoords) formData.append("locationCoords", JSON.stringify(locationCoords));
     if (taggedFriends.length > 0) {
       formData.append("taggedFriends", JSON.stringify(taggedFriends));
     }
@@ -67,6 +162,9 @@ export default function CreatePost({ setPosts, groupId }) {
       setText("");
       setImage(null);
       setLocation("");
+      setLocationInput("");
+      setLocationCoords(null);
+      setPlaceSuggestions([]);
       setShowLocationInput(false);
       setTaggedFriends([]);
       setShowFriendsPicker(false);
@@ -122,24 +220,99 @@ export default function CreatePost({ setPosts, groupId }) {
         </div>
       )}
 
-      {/* Location Input Banner */}
+      {/* Location Input Banner with OpenStreetMap Autocomplete */}
       {showLocationInput && (
-        <div className="mt-3.5 flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <MapPin className="w-4.5 h-4.5 text-rose-500 shrink-0" />
-          <input
-            type="text"
-            placeholder="Add location (e.g. New York, NY)"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="flex-1 text-sm bg-transparent outline-none text-slate-700"
-          />
-          {location && (
+        <div className="mt-3.5 space-y-2 relative">
+          <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200 focus-within:border-rose-400 focus-within:bg-white focus-within:ring-1 focus-within:ring-rose-200 transition-all">
+            <MapPin className="w-4.5 h-4.5 text-rose-500 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search city, place, or landmark..."
+              value={locationInput}
+              onChange={(e) => {
+                setLocationInput(e.target.value);
+                setLocation(e.target.value);
+              }}
+              className="flex-1 text-sm bg-transparent outline-none text-slate-800 placeholder:text-slate-400 font-medium"
+            />
+            {searchingLocation && (
+              <Loader2 className="w-4 h-4 text-slate-400 animate-spin shrink-0" />
+            )}
             <button
-              onClick={() => setLocation("")}
-              className="text-slate-400 hover:text-slate-600"
+              type="button"
+              onClick={handleDetectCurrentLocation}
+              disabled={detectingLocation}
+              className="flex items-center gap-1 px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+              title="Detect current position via GPS"
             >
-              <X className="w-4 h-4" />
+              {detectingLocation ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Navigation className="w-3.5 h-3.5" />
+              )}
+              <span className="hidden sm:inline">Use GPS</span>
             </button>
+            {locationInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setLocation("");
+                  setLocationInput("");
+                  setPlaceSuggestions([]);
+                }}
+                className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Autocomplete Suggestions Dropdown */}
+          {placeSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 z-30 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-56 overflow-y-auto divide-y divide-slate-100">
+              {placeSuggestions.map((place) => {
+                const addr = place.address || {};
+                const placeName =
+                  addr.amenity || addr.name || addr.road || place.display_name.split(",")[0];
+                const detail = [
+                  addr.city || addr.town || addr.village || addr.county,
+                  addr.state,
+                  addr.country,
+                ]
+                  .filter(Boolean)
+                  .join(", ");
+                const formattedName = detail ? `${placeName}, ${detail}` : place.display_name;
+
+                return (
+                  <button
+                    key={place.place_id}
+                    type="button"
+                    onClick={() => {
+                      setLocation(formattedName);
+                      setLocationInput(formattedName);
+                      if (place.lat && place.lon) {
+                        setLocationCoords({
+                          lat: parseFloat(place.lat),
+                          lng: parseFloat(place.lon),
+                        });
+                      }
+                      setPlaceSuggestions([]);
+                    }}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-rose-50/60 transition-colors flex items-start gap-2.5 cursor-pointer group"
+                  >
+                    <MapPin className="w-4 h-4 text-rose-500 shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-800 truncate leading-snug">
+                        {placeName}
+                      </p>
+                      <p className="text-[11px] text-slate-500 truncate leading-snug">
+                        {detail || place.display_name}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       )}

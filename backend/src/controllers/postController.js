@@ -40,6 +40,17 @@ export const createPost = async (req, res, next) => {
 
     let image = "";
 
+    let locationCoords = null;
+    if (req.body.locationCoords) {
+      try {
+        locationCoords = typeof req.body.locationCoords === "string"
+          ? JSON.parse(req.body.locationCoords)
+          : req.body.locationCoords;
+      } catch {
+        locationCoords = null;
+      }
+    }
+
     if (!text && !req.file && !location) {
       throw new ApiError(400, "Text, location or image required");
     }
@@ -54,6 +65,7 @@ export const createPost = async (req, res, next) => {
       text: text || "",
       image,
       location: location || "",
+      locationCoords: locationCoords || undefined,
       taggedFriends,
       group: group || null,
     });
@@ -128,6 +140,16 @@ export const updatePost = async (req, res, next) => {
 
     if (text !== undefined) post.text = text;
     if (location !== undefined) post.location = location;
+
+    if (req.body.locationCoords !== undefined) {
+      try {
+        post.locationCoords = typeof req.body.locationCoords === "string"
+          ? JSON.parse(req.body.locationCoords)
+          : req.body.locationCoords;
+      } catch {
+        // keep existing if parse fails
+      }
+    }
 
     if (req.body.taggedFriends) {
       try {

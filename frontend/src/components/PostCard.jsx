@@ -23,6 +23,7 @@ import {
   Repeat,
   Loader2,
   Bookmark,
+  ExternalLink,
 } from "lucide-react";
 
 const DEFAULT_AVATAR =
@@ -602,8 +603,10 @@ export default function PostCard({ post, setPosts }) {
                 </span>
               )}
               {post.location && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-rose-500 font-medium bg-rose-50 px-2 py-0.5 rounded-full">
-                  <MapPin className="w-3 h-3" />
+                <span
+                  className="inline-flex items-center gap-1 text-[11px] text-rose-600 font-bold bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-100/80 shadow-2xs"
+                >
+                  <MapPin className="w-3 h-3 text-rose-500 fill-rose-500/20" />
                   {post.location}
                 </span>
               )}
@@ -800,6 +803,55 @@ export default function PostCard({ post, setPosts }) {
                 controls
                 className="w-full h-auto max-h-[750px] object-contain mx-auto block"
               />
+            </div>
+          )}
+
+          {/* Direct Inline Interactive Map */}
+          {post.location && (
+            <div className="mx-5 my-3 rounded-2xl overflow-hidden border border-slate-200/90 bg-slate-50 shadow-2xs">
+              <div className="px-3.5 py-2 bg-slate-100/80 border-b border-slate-200/80 flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <MapPin className="w-4 h-4 text-rose-500 fill-rose-500/20 shrink-0" />
+                  <span className="text-xs font-bold text-slate-800 truncate">
+                    {post.location}
+                  </span>
+                </div>
+                <a
+                  href={
+                    post.locationCoords?.lat && post.locationCoords?.lng
+                      ? `https://www.google.com/maps/search/?api=1&query=${post.locationCoords.lat},${post.locationCoords.lng}`
+                      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          post.location
+                        )}`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 shrink-0"
+                >
+                  <span>Open Map</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              <div className="w-full h-52 sm:h-60 bg-slate-100 relative">
+                <iframe
+                  title={`Map of ${post.location}`}
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  scrolling="no"
+                  marginHeight="0"
+                  marginWidth="0"
+                  src={
+                    post.locationCoords?.lat && post.locationCoords?.lng
+                      ? `https://maps.google.com/maps?q=${post.locationCoords.lat},${post.locationCoords.lng}&t=&z=14&ie=UTF8&iwloc=&output=embed`
+                      : `https://maps.google.com/maps?q=${encodeURIComponent(
+                          post.location
+                        )}&t=&z=14&ie=UTF8&iwloc=&output=embed`
+                  }
+                  className="w-full h-full border-0"
+                />
+              </div>
             </div>
           )}
         </>

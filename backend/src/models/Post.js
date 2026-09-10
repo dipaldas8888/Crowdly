@@ -25,6 +25,10 @@ const postSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    locationCoords: {
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+    },
     taggedFriends: [
       {
         type: mongoose.Schema.Types.ObjectId,
