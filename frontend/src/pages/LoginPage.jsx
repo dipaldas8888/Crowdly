@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useAuth } from "../context/AuthContext";
@@ -13,6 +13,7 @@ import {
   Sparkles,
   Heart,
   Clock,
+  Zap,
 } from "lucide-react";
 
 export default function LoginPage({ defaultAuthMode = "signin" }) {
@@ -23,6 +24,8 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showWakeUpBanner, setShowWakeUpBanner] = useState(false);
+  const wakeUpTimer = useRef(null);
 
   // Modals
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -36,6 +39,22 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
       navigate("/home", { replace: true });
     }
   }, [user, navigate]);
+
+  // Ping backend on mount to trigger Render cold-start warm-up as early as possible
+  useEffect(() => {
+    apiRequest("/auth/me").catch(() => {});
+
+    // Show a friendly notice after 6s if the user is still on login page
+    // (indicates backend is waking up from Render cold start)
+    wakeUpTimer.current = setTimeout(() => {
+      setShowWakeUpBanner(true);
+    }, 6000);
+
+    return () => clearTimeout(wakeUpTimer.current);
+  }, []);
+
+  // Hide the banner once login succeeds or user navigates away
+  const dismissWakeUp = () => setShowWakeUpBanner(false);
 
 
   const handleSignIn = async (e) => {
@@ -169,6 +188,20 @@ export default function LoginPage({ defaultAuthMode = "signin" }) {
         {/* ── Right Side: Auth Form Panel (5 cols) ── */}
         <div className="lg:col-span-5 bg-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-slate-200/80">
           <div className="max-w-md w-full mx-auto space-y-6">
+
+            {/* Backend wake-up notice (Render free tier cold start) */}
+            {showWakeUpBanner && (
+              <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+                <Zap className="w-4 h-4 mt-0.5 shrink-0 text-amber-500 animate-pulse" />
+                <div className="flex-1">
+                  <p className="font-semibold">Server is warming up&hellip;</p>
+                  <p className="text-amber-700 mt-0.5">
+                    The backend is hosted on Render's free tier — it takes ~30s to wake up after inactivity. Login will work normally once it's ready!
+                  </p>
+                </div>
+                <button onClick={dismissWakeUp} className="text-amber-500 hover:text-amber-700 font-bold text-sm leading-none mt-0.5">✕</button>
+              </div>
+            )}
             {/* Header */}
             <div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">

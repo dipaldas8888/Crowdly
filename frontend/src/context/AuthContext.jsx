@@ -10,7 +10,13 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const data = await apiRequest("/auth/me");
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Timeout")), 5000)
+        );
+        const data = await Promise.race([
+          apiRequest("/auth/me"),
+          timeoutPromise,
+        ]);
         setUser(data);
       } catch {
         setUser(null);
