@@ -2,7 +2,6 @@ import {
   Navigate,
   Outlet,
   createBrowserRouter,
-  redirect,
 } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
@@ -10,7 +9,6 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ToastContainer } from "react-toastify";
-import { apiRequest } from "./lib/api";
 import PageLoader from "./components/PageLoader";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
@@ -52,18 +50,6 @@ const theme = createTheme({
 });
 
 // ─────────────────────────────────────────────
-// Auth loader — redirects to /login if no session
-// ─────────────────────────────────────────────
-const requireAuth = async () => {
-  try {
-    await apiRequest("/auth/me");
-    return null;
-  } catch {
-    throw redirect("/login");
-  }
-};
-
-// ─────────────────────────────────────────────
 // Suspense wrapper — shows skeleton while chunks load
 // ─────────────────────────────────────────────
 function SuspensePage({ children }) {
@@ -99,23 +85,51 @@ function AppShell() {
 }
 
 // ─────────────────────────────────────────────
-// Protected layout — guards all auth-required routes
+// Protected layout — waits for auth check,
+// redirects to /login if not authenticated.
+// No loader needed — auth is checked inside React.
 // ─────────────────────────────────────────────
 function ProtectedLayout() {
   const { user, authLoading } = useAuth();
+
+  // Show branded loader while auth check is in flight
+  // (prevents blank screen AND prevents premature redirect)
   if (authLoading) return <PageLoader />;
+
+  // Not logged in → go to login
   if (!user) return <Navigate to="/login" replace />;
+
   return <Outlet />;
 }
 
 // ─────────────────────────────────────────────
+// Root redirect — handles "/" intelligently
+// ─────────────────────────────────────────────
+function RootRedirect() {
+  const { user, authLoading } = useAuth();
+  if (authLoading) return <PageLoader />;
+  return <Navigate to={user ? "/home" : "/login"} replace />;
+}
+
+// ─────────────────────────────────────────────
 // Router — flat structure, lazy pages wrapped in Suspense
+// No async loaders — all auth handled inside React
+// so the page is never blank while a fetch is pending.
 // ─────────────────────────────────────────────
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <AppShell />,
     children: [
+      // Root: smart redirect based on auth state
+      {
+        index: true,
+        element: (
+          <SuspensePage>
+            <RootRedirect />
+          </SuspensePage>
+        ),
+      },
       {
         path: "register",
         element: (
@@ -132,18 +146,10 @@ export const router = createBrowserRouter([
           </SuspensePage>
         ),
       },
+      // ── Protected routes (auth guarded inside React) ──
       {
         element: <ProtectedLayout />,
-        loader: requireAuth,
         children: [
-          {
-            index: true,
-            element: (
-              <SuspensePage>
-                <HomePage />
-              </SuspensePage>
-            ),
-          },
           {
             path: "home",
             element: (
