@@ -7,8 +7,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Crowdly · Connect &amp; Share</title>
     <meta name="description" content="Crowdly is a modern social media platform to connect with friends, share stories, watch videos, and join community groups." />
+
+    <!--
+      Runs synchronously — before ANY painting.
+      Adds 'has-session' class to <html> so CSS below
+      hides #splash instantly for returning users.
+    -->
+    <script>try{if(sessionStorage.getItem('crowdly_session'))document.documentElement.classList.add('has-session')}catch(e){}</script>
+
     <style>
-      /* ── Instant splash shown before React hydrates ── */
+      /* Hide splash immediately for returning users — zero flicker */
+      html.has-session #splash { display: none !important; }
+
+      /* ── Branded splash — only for fresh starts ── */
       #splash {
         position: fixed;
         inset: 0;
@@ -27,68 +38,39 @@
         pointer-events: none;
       }
       #splash-logo {
-        width: 80px;
-        height: 80px;
+        width: 80px; height: 80px;
         border-radius: 22px;
         background: linear-gradient(135deg, #4f46e5, #7c3aed);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 0 40px rgba(124, 58, 237, 0.5), 0 0 80px rgba(79, 70, 229, 0.3);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 0 40px rgba(124,58,237,.5), 0 0 80px rgba(79,70,229,.3);
         animation: pulse-glow 2s ease-in-out infinite;
       }
-      #splash-logo svg {
-        width: 48px;
-        height: 48px;
-        fill: none;
-        stroke: white;
-        stroke-width: 2;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
+      #splash-logo svg { width: 48px; height: 48px; fill: none; stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
       #splash-title {
         font-family: 'Segoe UI', system-ui, sans-serif;
-        font-size: 2rem;
-        font-weight: 800;
-        letter-spacing: -0.5px;
-        background: linear-gradient(90deg, #a78bfa, #60a5fa, #a78bfa);
+        font-size: 2rem; font-weight: 800; letter-spacing: -0.5px;
+        background: linear-gradient(90deg,#a78bfa,#60a5fa,#a78bfa);
         background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         animation: shimmer 2s linear infinite;
       }
-      #splash-dots {
-        display: flex;
-        gap: 8px;
-      }
-      #splash-dots span {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #7c3aed;
-        animation: bounce-dot 1.2s ease-in-out infinite;
-      }
-      #splash-dots span:nth-child(2) { animation-delay: 0.2s; background: #4f46e5; }
-      #splash-dots span:nth-child(3) { animation-delay: 0.4s; background: #60a5fa; }
+      #splash-dots { display: flex; gap: 8px; }
+      #splash-dots span { width: 8px; height: 8px; border-radius: 50%; background: #7c3aed; animation: bounce-dot 1.2s ease-in-out infinite; }
+      #splash-dots span:nth-child(2){ animation-delay:.2s; background:#4f46e5; }
+      #splash-dots span:nth-child(3){ animation-delay:.4s; background:#60a5fa; }
       @keyframes pulse-glow {
-        0%, 100% { box-shadow: 0 0 40px rgba(124,58,237,0.5), 0 0 80px rgba(79,70,229,0.3); }
-        50% { box-shadow: 0 0 60px rgba(124,58,237,0.8), 0 0 120px rgba(79,70,229,0.5); }
+        0%,100%{ box-shadow:0 0 40px rgba(124,58,237,.5),0 0 80px rgba(79,70,229,.3); }
+        50%    { box-shadow:0 0 60px rgba(124,58,237,.8),0 0 120px rgba(79,70,229,.5); }
       }
-      @keyframes shimmer {
-        0% { background-position: 0% center; }
-        100% { background-position: 200% center; }
-      }
+      @keyframes shimmer { 0%{background-position:0% center} 100%{background-position:200% center} }
       @keyframes bounce-dot {
-        0%, 80%, 100% { transform: scale(0.7); opacity: 0.5; }
-        40% { transform: scale(1.2); opacity: 1; }
+        0%,80%,100%{ transform:scale(.7); opacity:.5; }
+        40%        { transform:scale(1.2); opacity:1; }
       }
-      /* Hide splash once React root renders */
-      #root:not(:empty) ~ * { display: none; }
     </style>
   </head>
   <body>
-    <!-- Instant branded splash – visible before JS parses -->
+    <!-- Splash: hidden immediately via CSS for returning users, shown only on fresh starts -->
     <div id="splash">
       <div id="splash-logo">
         <svg viewBox="0 0 24 24">
@@ -100,32 +82,32 @@
         </svg>
       </div>
       <div id="splash-title">Crowdly</div>
-      <div id="splash-dots">
-        <span></span><span></span><span></span>
-      </div>
+      <div id="splash-dots"><span></span><span></span><span></span></div>
     </div>
 
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- Remove splash once React mounts -->
+    <!-- Remove splash once React mounts (only matters on fresh starts) -->
     <script>
-      (function() {
+      (function(){
         var splash = document.getElementById('splash');
+        // Already hidden (returning user) — nothing to do
+        if(!splash || getComputedStyle(splash).display === 'none') return;
         var root = document.getElementById('root');
-        var observer = new MutationObserver(function() {
-          if (root.children.length > 0) {
+        var obs = new MutationObserver(function(){
+          if(root.children.length > 0){
             splash.classList.add('hidden');
-            setTimeout(function() { splash.remove(); }, 500);
-            observer.disconnect();
+            setTimeout(function(){ if(splash.parentNode) splash.remove(); }, 450);
+            obs.disconnect();
           }
         });
-        observer.observe(root, { childList: true });
-        // Safety fallback – remove after 8s regardless
-        setTimeout(function() {
+        obs.observe(root,{childList:true});
+        // Safety: remove after 8s regardless
+        setTimeout(function(){
           splash.classList.add('hidden');
-          setTimeout(function() { if (splash.parentNode) splash.remove(); }, 500);
-        }, 8000);
+          setTimeout(function(){ if(splash.parentNode) splash.remove(); },450);
+        },8000);
       })();
     </script>
   </body>

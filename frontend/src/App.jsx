@@ -10,16 +10,18 @@ import { SocketProvider } from "./context/SocketContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { ToastContainer } from "react-toastify";
 import PageLoader from "./components/PageLoader";
+import AppSplash from "./components/AppSplash";
+import HomePage from "./pages/HomePage";
 import "react-toastify/dist/ReactToastify.css";
 import "./App.css";
 
 // ─────────────────────────────────────────────
 // Lazy-loaded page chunks — each page gets its
 // own JS chunk, loaded only when first visited.
+// HomePage is imported directly above for instant load on refresh!
 // ─────────────────────────────────────────────
 const LoginPage        = lazy(() => import("./pages/LoginPage"));
 const RegisterPage     = lazy(() => import("./pages/RegisterPage"));
-const HomePage         = lazy(() => import("./pages/HomePage"));
 const FriendsPage      = lazy(() => import("./pages/FriendsPage"));
 const GroupsPage       = lazy(() => import("./pages/GroupsPage"));
 const GroupDetailPage  = lazy(() => import("./pages/GroupDetailPage"));
@@ -50,7 +52,7 @@ const theme = createTheme({
 });
 
 // ─────────────────────────────────────────────
-// Suspense wrapper — shows skeleton while chunks load
+// Suspense wrapper — shows light skeleton while chunks load
 // ─────────────────────────────────────────────
 function SuspensePage({ children }) {
   return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
@@ -85,31 +87,49 @@ function AppShell() {
 }
 
 // ─────────────────────────────────────────────
-// Protected layout — waits for auth check,
-// redirects to /login if not authenticated.
-// No loader needed — auth is checked inside React.
+// Protected layout — guards all auth-required routes
+// ─────────────────────────────────────────────
+// Behaviour matrix:
+//
+//  authLoading │ hasSession │ user  │ Action
+//  ────────────┼────────────┼───────┼──────────────────────────────────
+//     true     │   false    │  null │ Show AppSplash (fresh start)
+//     true     │   true     │  null │ Render children optimistically
+//     false    │   any      │  obj  │ Render children (auth confirmed)
+//     false    │   any      │  null │ Redirect to /login (session ended)
 // ─────────────────────────────────────────────
 function ProtectedLayout() {
   const { user, authLoading } = useAuth();
+  const hasSession = !!sessionStorage.getItem("crowdly_session");
 
-  // Show branded loader while auth check is in flight
-  // (prevents blank screen AND prevents premature redirect)
-  if (authLoading) return <PageLoader />;
+  // Still checking AND no prior session → show branded splash
+  if (authLoading && !hasSession) return <AppSplash />;
 
-  // Not logged in → go to login
-  if (!user) return <Navigate to="/login" replace />;
+  // Auth check finished and no user (session expired / invalid) → login
+  if (!authLoading && !user) return <Navigate to="/login" replace />;
 
+  // Either optimistic render (session flag, auth still loading)
+  // or confirmed auth (authLoading=false, user exists) → show page
   return <Outlet />;
 }
 
 // ─────────────────────────────────────────────
-// Root redirect — handles "/" intelligently
+// Root redirect — "/" → /home or /login
 // ─────────────────────────────────────────────
 function RootRedirect() {
   const { user, authLoading } = useAuth();
-  if (authLoading) return <PageLoader />;
+  const hasSession = !!sessionStorage.getItem("crowdly_session");
+
+  // Still on fresh start and checking → show splash
+  if (authLoading && !hasSession) return <AppSplash />;
+
+  // Has session flag → optimistically go to home
+  if (hasSession) return <Navigate to="/home" replace />;
+
+  // Auth done → route based on result
   return <Navigate to={user ? "/home" : "/login"} replace />;
 }
+
 
 // ─────────────────────────────────────────────
 // Router — flat structure, lazy pages wrapped in Suspense
